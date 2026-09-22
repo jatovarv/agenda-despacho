@@ -1,4 +1,7 @@
 import {db} from '@/db/raw';
+import {validSetupCode} from '@/db/sqlite.mjs';
+import {appOrigin,secureCookie} from '@/lib/server-config';
+export const runtime='nodejs';
 import {CATALOG,DEFAULT_SETTINGS,ROOMS,minutes,today,localNow,assignRoom,alternatives} from '@/lib/catalog';
 import {digest,hashPassword,verifyPassword,token,safeUser} from '@/lib/auth';
 export const dynamic='force-dynamic';
@@ -36,7 +39,7 @@ function validateBooking(b:any,s:any,allowPast=false){
  if(!Array.isArray(b.operationIds)||!b.operationIds.length||b.operationIds.length>100)fail('Selecciona al menos una operación.');
  if(b.operationIds.some((x:any)=>!s.operations.some((o:any)=>o.id===x&&o.active)))fail('Una operación ya no está activa. Revisa la selección.');
 }
-async function sessionResponse(req:Request,u:any){const t=token();await db().batch([db().prepare('DELETE FROM sessions WHERE expires<?').bind(Date.now()),db().prepare('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)').bind(await digest(t),u.id,Date.now()+8*3600e3)]);return json({user:safeUser(u)},200,{'Set-Cookie':`desk_session=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${new URL(req.url).protocol==='https:'?'; Secure':''}`});}
+async function sessionResponse(req:Request,u:any){const t=token();await db().batch([db().prepare('DELETE FROM sessions WHERE expires<?').bind(Date.now()),db().prepare('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)').bind(await digest(t),u.id,Date.now()+8*3600e3)]);return json({user:safeUser(u)},200,{'Set-Cookie':`desk_session=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${secureCookie(req)?'; Secure':''}`});}
 export async function GET(req:Request){try{
  const count=await db().prepare('SELECT count(*) n FROM users').first<any>();if(!count.n)return json({setup:true});
  const u=await current(req);if(!u)return json({login:true},401);
@@ -47,17 +50,18 @@ export async function GET(req:Request){try{
  return json({user:safeUser(u),...(exporting?{audit:s.audit}:{}),...Object.fromEntries(['bookings','blocks','teams','operations','settings'].map(k=>[k,(s as any)[k]])),users:s.users.map(safeUser)});
  }catch(e:any){console.error('desk GET',e.message);return json({error:e.status?e.message:'No se pudo cargar la agenda. Intenta nuevamente.'},e.status||503);}}
 export async function POST(req:Request){try{
- if(req.headers.get('origin')&&req.headers.get('origin')!==new URL(req.url).origin)fail('Origen no autorizado.',403);
+ if(req.headers.get('origin')&&req.headers.get('origin')!==appOrigin(req))fail('Origen no autorizado.',403);
  if(!req.headers.get('content-type')?.includes('application/json'))fail('Formato no válido.',415);
  const raw=await req.text();if(raw.length>60000)fail('Solicitud demasiado grande.',413);const b=JSON.parse(raw),action=clean(b.action,40);
  if(action==='setup'){
+ if(!validSetupCode(b.setupCode))fail('Código de instalación incorrecto. Solicítalo al administrador del servidor.',403);
  if((await db().prepare('SELECT count(*) n FROM users').first<any>()).n)fail('La configuración inicial ya se completó.',409);
  const username=clean(b.username).toUpperCase(),name=clean(b.name);if(!/^[A-Z0-9._-]{2,30}$/.test(username)||!name||typeof b.password!=='string'||b.password.length<12||b.password.length>200)fail('Indica nombre, usuario de 2 a 30 caracteres y contraseña de al menos 12 caracteres.');
  const u={id:id(),username,name,team:'team-admin',role:'ceo',active:1,must_change:0};
  await db().batch([db().prepare('INSERT INTO revision(id,value) VALUES(1,1)'),db().prepare('INSERT INTO users(id,username,name,team,role,hash,active,must_change) VALUES(?,?,?,?,?,?,1,0)').bind(u.id,username,name,u.team,u.role,await hashPassword(b.password)),record('team',{id:'team-admin',name:'Dirección'}),record('team',{id:'team-16',name:'Equipo 16'}),record('settings',{id:'settings',...DEFAULT_SETTINGS}),...CATALOG.map(o=>record('operation',o)),audit(username,'CONFIGURACIÓN INICIAL','despacho',null,{user:safeUser(u),operations:CATALOG.length})]);return sessionResponse(req,u);
  }
  if(action==='login'){
- const username=clean(b.username).toUpperCase(),key=await digest(username+'|'+(req.headers.get('cf-connecting-ip')||'local'));
+ const username=clean(b.username).toUpperCase(),key=await digest(username);
  const at=await db().prepare('SELECT * FROM attempts WHERE key=?').bind(key).first<any>();if(at&&at.until>Date.now()&&at.count>=8)fail('Demasiados intentos. Intenta en 15 minutos.',429);
  const u=await db().prepare('SELECT * FROM users WHERE username=? AND active=1').bind(username).first<any>();
  if(typeof b.password!=='string'||b.password.length>200||!u||!await verifyPassword(b.password,u.hash)){

@@ -1,0 +1,21 @@
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
+import { resolve, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+if (existsSync('.env')) loadEnvFile('.env');
+process.env.NODE_ENV = 'production';
+process.env.NEXT_TELEMETRY_DISABLED = '1';
+process.env.DATA_DIR ||= resolve('data');
+process.env.MIGRATIONS_DIR ||= resolve('drizzle');
+process.env.PORT ||= '3000';
+process.env.HOSTNAME = '0.0.0.0';
+if (!process.env.APP_ORIGIN) throw new Error('Configura APP_ORIGIN en .env. Ejemplo: http://192.168.1.20:3000');
+const origin = new URL(process.env.APP_ORIGIN);
+if (!['http:','https:'].includes(origin.protocol) || origin.origin !== process.env.APP_ORIGIN) throw new Error('APP_ORIGIN debe ser una dirección sin ruta ni barra final.');
+const {openDatabase,setupCode}=await import('../db/sqlite.mjs');
+openDatabase();setupCode();
+// The application can reuse the process-wide initialized SQLite connection.
+const server=existsSync('server.js')?resolve('server.js'):resolve('.next/standalone/server.js');
+if (!existsSync(server)) throw new Error('Primero compila la aplicación con npm run build.');
+console.log(`Agenda del despacho: ${origin.origin}`);
+await import(pathToFileURL(server).href);

@@ -1,0 +1,25 @@
+name: agenda-despacho
+services:
+  agenda:
+    build: .
+    image: agenda-despacho:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    environment:
+      APP_ORIGIN: "${APP_ORIGIN:-http://localhost:3000}"
+      DATA_DIR: /app/data
+      MIGRATIONS_DIR: /app/drizzle
+      BACKUP_DIR: /app/backups
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - agenda-data:/app/data
+      - agenda-backups:/app/backups
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  agenda-data:
+  agenda-backups:

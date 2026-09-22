@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.wrangler
+.sites-runtime
+.openai
+.env
+.env.*
+data
+backups
+outputs
+work
+dist
+*.zip
+*.tar.gz
+*.tsbuildinfo

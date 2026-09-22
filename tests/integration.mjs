@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
-const base=process.env.DESK_TEST_URL||'http://localhost:5173';
+const base=process.env.DESK_TEST_URL||'http://127.0.0.1:3187';
 assert(['localhost','127.0.0.1'].includes(new URL(base).hostname),'Solo se ejecuta contra la base local de pruebas');
 let cookie='';let checks=0;
 async function call(body,c=cookie,audit=false){const r=await fetch(base+'/api/desk'+(audit?'?audit=1':''),{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(c?{Cookie:c}:{})},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(r.headers.get('set-cookie'))cookie=r.headers.get('set-cookie').split(';')[0];return {status:r.status,...data};}
 function check(v,label){assert(v,label);checks++;console.log('PASS',label);}
 const initial=await call();let login;
-if(initial.setup)login=await call({action:'setup',name:'Dirección de prueba',username:'QA_ADMIN',password:'Local-QA-only-2026!'});
+if(initial.setup){const rejected=await call({action:'setup',setupCode:'invalid',name:'Intruso',username:'BAD_SETUP',password:'Should-not-create-2026!'});check(rejected.status===403,'instalación protegida con código del servidor');}
+if(initial.setup)login=await call({action:'setup',setupCode:process.env.SETUP_CODE,name:'Dirección de prueba',username:'QA_ADMIN',password:'Local-QA-only-2026!'});
 else login=await call({action:'login',username:'QA_ADMIN',password:'Local-QA-only-2026!'});
 check(login.status===200,'login / configuración inicial');
+const originRejected=await fetch(base+'/api/desk',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://externo.invalid',Cookie:cookie},body:JSON.stringify({action:'logout'})});check(originRejected.status===403,'rechaza origen externo');
+const originAccepted=await fetch(base+'/api/desk',{method:'POST',headers:{'Content-Type':'application/json',Origin:process.env.APP_ORIGIN||base,Cookie:cookie},body:JSON.stringify({action:'print',entity:'prueba de origen',format:'PDF'})});check(originAccepted.status===200,'acepta dirección configurada detrás de proxy');
 const adminCookie=cookie;let d=await call();check(d.settings.open==='08:00'&&d.settings.close==='17:30'&&d.settings.duration===60,'horario 08:00–17:30 y duración 60');check(d.operations.length===44,'44 operaciones del catálogo');
 const last=[new Date().toISOString().slice(0,10),...d.bookings.map(b=>b.date)].sort().at(-1);const dt=new Date(Date.parse(last+'T12:00:00Z')+86400e3).toISOString().slice(0,10),run=Date.now();const make=(n,time='10:00')=>({action:'booking',client:`Prueba ${run}-${n}`,attendee:d.user.id,date:dt,time,duration:60,people:4,operationIds:d.operations.slice(0,2).map(o=>o.id)});
 const reservations=await Promise.all(Array.from({length:6},(_,i)=>call(make(i))));const accepted=reservations.filter(r=>r.booking?.status==='confirmed');check(accepted.length===5,'cinco reservas concurrentes y ninguna doble asignación');check(new Set(accepted.map(r=>r.booking.room)).size===5,'cada reserva simultánea ocupa una sala distinta');const conflict=reservations.find(r=>r.conflict);check(conflict?.alternatives.length===4,'sin disponibilidad ofrece 4 alternativas');

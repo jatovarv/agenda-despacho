@@ -1,0 +1,13 @@
+import {build} from 'esbuild';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+await build({entryPoints:['lib/export.ts'],bundle:true,platform:'node',format:'esm',outfile:'/private/tmp/agenda-export-test.mjs'});
+const exp=await import('/private/tmp/agenda-export-test.mjs');let captured;
+globalThis.document={createElement:()=>({click(){}})};URL.createObjectURL=(blob)=>{captured=blob;return 'blob:test'};URL.revokeObjectURL=()=>{};
+const b={id:'test',folio:1,client:'Cliente <script> de prueba',date:'2026-09-22',time:'08:00',duration:60,people:5,accessibility:true,room:'barra',status:'attended',attendeeName:'Prueba',teamName:'Equipo prueba',operations:[{name:'Testamento',matter:'Personal'}],createdBy:'TEST',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+const sheets=exp.exportSheets({bookings:[b],operations:[{id:'o1',name:'Testamento',matter:'Personal',active:true}],blocks:[]},[{id:1,at:new Date().toISOString(),actor:'TEST',action:'CREAR CITA',entity:'C-000001',before:null,after:JSON.stringify(b)}]);
+await exp.xlsxExport(sheets);fs.writeFileSync('/private/tmp/agenda-export-test.xlsx',Buffer.from(await captured.arrayBuffer()));
+exp.csvExport([{name:'Prueba',rows:[['Cliente'],['=1+1']]}]);assert((await captured.text()).includes("'=1+1"));
+let html='';const popup={document:{open(){},write(s){html=s},close(){}}};exp.printBooking(b,'Despacho',popup);
+assert(html.includes('&lt;script&gt;'));assert(html.includes('</script>'),'El script de impresión debe cerrar correctamente');assert(html.includes('08:00–09:00'));fs.writeFileSync('/private/tmp/agenda-confirmacion-test.html',html);
+console.log('PASS XLSX generado, CSV neutraliza fórmulas y confirmación escapa HTML.');process.exit(0);

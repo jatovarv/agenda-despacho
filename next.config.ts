@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
-  outputFileTracingIncludes: { '/*': ['./drizzle/**/*', './db/sqlite.mjs'] },
+  outputFileTracingIncludes: { '/*': ['./drizzle/**/*', './src/db/sqlite.mjs'] },
   experimental: { cpus: 2 },
   async headers() {
     return [{ source: '/:path*', headers: [

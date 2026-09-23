@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {DatabaseSync} from 'node:sqlite';
 const folder=mkdtempSync(join(tmpdir(),'agenda-local-db-'));process.env.DATA_DIR=folder;
-const {openDatabase,setupCode,validSetupCode,backupDatabase,databasePath}=await import('../db/sqlite.mjs');
+const {openDatabase,setupCode,validSetupCode,backupDatabase,databasePath}=await import('../src/db/sqlite.mjs');
 const db=openDatabase();assert.equal(db.prepare('SELECT count(*) n FROM _local_migrations').get().n,1);
 assert.equal(openDatabase(),db);
 assert.equal(validSetupCode('invalid'),false);assert.equal(validSetupCode(setupCode()),true);
@@ -16,7 +16,7 @@ assert.equal(db.prepare('SELECT * FROM records WHERE id=?').get('must-rollback')
 const backupPath=join(folder,'copy.sqlite');await backupDatabase(backupPath);
 const copy=new DatabaseSync(backupPath,{readOnly:true});assert.equal(copy.prepare('SELECT data FROM records WHERE id=?').get('persistence-test').data,JSON.stringify({name:'Equipo persistente'}));copy.close();
 await assert.rejects(backupDatabase(backupPath),/ya existe/);
-const child=spawnSync(process.execPath,['--input-type=module','-e',"import {openDatabase} from './db/sqlite.mjs';const d=openDatabase();if(!d.prepare(\"SELECT id FROM records WHERE id='persistence-test'\").get())process.exit(1);console.log('persisted');"],{cwd:resolve('.'),env:process.env,encoding:'utf8'});assert.equal(child.status,0,child.stderr);assert.match(child.stdout,/persisted/);
+const child=spawnSync(process.execPath,['--input-type=module','-e',"import {openDatabase} from './src/db/sqlite.mjs';const d=openDatabase();if(!d.prepare(\"SELECT id FROM records WHERE id='persistence-test'\").get())process.exit(1);console.log('persisted');"],{cwd:resolve('.'),env:process.env,encoding:'utf8'});assert.equal(child.status,0,child.stderr);assert.match(child.stdout,/persisted/);
 const restorePath=join(folder,'restored');cpSync(backupPath,restorePath);const restored=new DatabaseSync(restorePath);assert.equal(restored.prepare('PRAGMA integrity_check').get().integrity_check,'ok');restored.close();
 console.log('PASS: migración automática, código inicial, rollback, respaldo, integridad y persistencia entre procesos.');
 const restoreDir=join(folder,'restore-check');

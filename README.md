@@ -2,7 +2,11 @@
 
 Aplicación de reservas de salas con usuarios individuales, equipos, asignación automática, 44 operaciones notariales, bloqueos, lista de espera, métricas y auditoría.
 
-**Instalación en Windows con Docker:** abre [LEEME-WINDOWS.md](LEEME-WINDOWS.md) y ejecuta `Iniciar-Windows.cmd`.
+**Implementación recomendada: Windows nativo, sin Docker.** Los desarrolladores deben seguir el [README técnico de implementación y operación](docs/README-TECNICO-WINDOWS.md): arquitectura, contrato HTTP, reglas de negocio, Node.js 24 + SQLite, arranque automático, respaldos, restauración, actualizaciones, migración y pruebas de aceptación.
+
+El documento incluye plantillas PowerShell que deben instalarse y validarse en la PC. La instalación nativa en el equipo destino y la migración desde Sites todavía no se han verificado.
+
+**Docker, alternativa secundaria:** [LEEME-WINDOWS.md](LEEME-WINDOWS.md). Los scripts Windows de la raíz corresponden a esa alternativa; no ejecutarlos para la instalación nativa.
 
 **Código en GitHub y ejecución en PC:** consulta [el mapa de código, datos e instalación](docs/GITHUB-Y-PC.md). 
 

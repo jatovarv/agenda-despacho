@@ -49,3 +49,9 @@ next-env.d.ts
 /backups/
 !.env.example
 /entrega/
+# Bases y codigos locales, incluso fuera de las carpetas predeterminadas.
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.setup-code

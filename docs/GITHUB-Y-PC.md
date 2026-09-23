@@ -46,9 +46,11 @@ La versión actual utiliza React, Next.js, TypeScript, Node.js 24 y SQLite. Tien
 
 1. Al configurar por primera vez, se cargan las operaciones que se transcribieron del PDF y el horario inicial 08:00–17:30, con duración de 60 minutos.
 2. Admin crea los equipos y usuarios. El catálogo y los ajustes posteriores se editan desde Administración.
-3. Cada integrante captura las citas. La aplicación valida los datos, asigna la sala y guarda la cita y su auditoría en una misma transacción.
+3. Cada integrante captura las citas. La aplicación valida los datos, asigna la sala cuando la atención es en oficina y guarda la cita y su auditoría en una misma transacción.
 4. Cambiar, reagendar, cancelar, atender o bloquear una sala actualiza la misma base compartida. Cada acción queda atribuida al usuario.
 5. Las métricas se calculan con esos registros. Excel y CSV son exportaciones; no alimentan automáticamente la agenda.
+
+Las citas marcadas «Fuera de la oficina» se confirman sin sala y cuentan en agenda y métricas de atención, pero no en uso de salas.
 
 El PDF original fue una fuente inicial, no un documento conectado en tiempo real. Reemplazar el PDF no actualiza el catálogo. Editar el catálogo inicial en el código tampoco modifica automáticamente una base que ya fue configurada; para eso se utiliza Administración o una migración expresa.
 

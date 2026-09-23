@@ -14,16 +14,21 @@ const groups: Record<string,string[]> = {
 };
 export const CATALOG=Object.entries(groups).flatMap(([matter,names],g)=>names.map((name,i)=>({id:`op-${g+1}-${i+1}`,matter,name,active:true})));
 export const DEFAULT_SETTINGS={name:'Agenda del despacho',open:'08:00',close:'17:30',duration:60,timezone:'America/Mexico_City'};
+export const OUTSIDE_OFFICE_LABEL='Fuera de la oficina';
+// Legacy bookings without outsideOffice remain office appointments.
+export const isRoomBooking=(b:{outsideOffice?:boolean;room?:string|null})=>!b.outsideOffice&&ROOMS.some(r=>r.id===b.room);
 export const minutes=(time:string)=>Number(time.split(':')[0])*60+Number(time.split(':')[1]);
 export const clock=(n:number)=>`${Math.floor(n/60).toString().padStart(2,'0')}:${(n%60).toString().padStart(2,'0')}`;
 export const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Mexico_City',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export const localNow=()=>new Intl.DateTimeFormat('en-GB',{timeZone:'America/Mexico_City',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
 export function assignRoom(input:any, bookings:any[],blocks:any[]){
+ if(input.outsideOffice)return null;
  const ordered=input.accessibility?[ROOMS[0],ROOMS[2],ROOMS[1],ROOMS[3],ROOMS[4]]:ROOMS;
  const start=minutes(input.time),end=start+Number(input.duration);
- return ordered.find(r=>r.capacity>=input.people && !bookings.some(b=>b.id!==input.id && b.date===input.date && b.room===r.id && ['confirmed','attended'].includes(b.status) && minutes(b.time)<end && minutes(b.time)+b.duration>start) && !blocks.some(b=>b.date===input.date && b.room===r.id && minutes(b.start)<end && minutes(b.end)>start)) || null;
+ return ordered.find(r=>r.capacity>=input.people && !bookings.some(b=>!b.outsideOffice && b.id!==input.id && b.date===input.date && b.room===r.id && ['confirmed','attended'].includes(b.status) && minutes(b.time)<end && minutes(b.time)+b.duration>start) && !blocks.some(b=>b.date===input.date && b.room===r.id && minutes(b.start)<end && minutes(b.end)>start)) || null;
 }
 export function alternatives(input:any,bookings:any[],blocks:any[],settings:any){
+ if(input.outsideOffice)return [];
  const slots=[];
  for(let n=minutes(settings.open);n+input.duration<=minutes(settings.close);n+=15){
   if(n===minutes(input.time)||(input.date===today()&&n<minutes(localNow())))continue;

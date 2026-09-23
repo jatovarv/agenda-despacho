@@ -33,7 +33,7 @@ function validateBooking(b:any,s:any,allowPast=false){
  if(!s.users.some((u:any)=>u.id===b.attendee&&u.active))fail('Selecciona una persona activa del despacho.');
  if(!dateValid(b.date)||!timeValid(b.time))fail('Fecha u hora no válida.');
  if(!allowPast&&(b.date<today()||(b.date===today()&&minutes(b.time)<minutes(localNow()))))fail('Elige una fecha y hora futuras.');
- if(!Number.isInteger(b.people)||b.people<1||b.people>100)fail('Indica entre 1 y 100 personas. Los grupos de más de 16 requieren lista de espera.');
+ if(!Number.isInteger(b.people)||b.people<1||b.people>100)fail('Indica entre 1 y 100 personas. En oficina, los grupos de más de 16 requieren lista de espera.');
  if(!Number.isInteger(b.duration)||b.duration<15||b.duration>600||b.duration%15)fail('La duración debe ser de 15 a 600 minutos, en intervalos de 15.');
  if(minutes(b.time)<minutes(s.settings.open)||minutes(b.time)+b.duration>minutes(s.settings.close))fail('La cita debe quedar dentro del horario de atención.');
  if(!Array.isArray(b.operationIds)||!b.operationIds.length||b.operationIds.length>100)fail('Selecciona al menos una operación.');
@@ -82,14 +82,15 @@ export async function POST(req:Request){try{
  if(before&&!['confirmed','waiting'].includes(before.status))fail('Esta cita ya no admite cambios.',409);
  const attendee=s.users.find((x:any)=>x.id===b.attendee) as any;
  if(!elevated(u)&&attendee?.team!==u.team)fail('Selecciona una persona de tu equipo.',403);
+ if(b.outsideOffice!==undefined&&typeof b.outsideOffice!=='boolean')fail('Indica si la atención es fuera de la oficina.');
  const ids=[...new Set(b.operationIds)] as string[];
- after={id:before?.id||id(),client:clean(b.client),attendee:b.attendee,attendeeName:attendee?.name,team:attendee?.team,teamName:s.teams.find(t=>t.id===attendee?.team)?.name,date:b.date,time:b.time,duration:Number(b.duration),people:Number(b.people),accessibility:!!b.accessibility,operationIds:ids,notes:clean(b.notes,1000)};
+ after={id:before?.id||id(),client:clean(b.client),attendee:b.attendee,attendeeName:attendee?.name,team:attendee?.team,teamName:s.teams.find(t=>t.id===attendee?.team)?.name,date:b.date,time:b.time,duration:Number(b.duration),people:Number(b.people),accessibility:!!b.accessibility,outsideOffice:b.outsideOffice===undefined?!!before?.outsideOffice:b.outsideOffice,operationIds:ids,notes:clean(b.notes,1000)};
  validateBooking(after,s);
  const room=assignRoom(after,s.bookings,s.blocks);
- if(!room&&!b.waiting)return json({conflict:true,alternatives:alternatives(after,s.bookings,s.blocks,s.settings),error:after.people>16?'El grupo supera la capacidad máxima de 16 personas.':'No hay sala disponible para ese horario.'},409);
+ if(!after.outsideOffice&&!room&&!b.waiting)return json({conflict:true,alternatives:alternatives(after,s.bookings,s.blocks,s.settings),error:after.people>16?'El grupo supera la capacidad máxima de 16 personas.':'No hay sala disponible para ese horario.'},409);
  const folio=before?.folio||Math.max(0,...s.bookings.map(x=>x.folio))+1;
- after={...after,folio,room:room?.id||null,status:room?'confirmed':'waiting',operations:ids.map(x=>{const o=s.operations.find(y=>y.id===x);return{id:o.id,name:o.name,matter:o.matter}}),createdAt:before?.createdAt||new Date().toISOString(),createdBy:before?.createdBy||u.username,updatedAt:new Date().toISOString(),updatedBy:u.username};
- statements=[record('booking',after)];entity=`C-${String(folio).padStart(6,'0')}`;label=before?'REAGENDAR CITA':room?'CREAR CITA':'AGREGAR A ESPERA';extra={booking:after};
+ after={...after,folio,room:room?.id||null,status:after.outsideOffice||room?'confirmed':'waiting',operations:ids.map(x=>{const o=s.operations.find(y=>y.id===x);return{id:o.id,name:o.name,matter:o.matter}}),createdAt:before?.createdAt||new Date().toISOString(),createdBy:before?.createdBy||u.username,updatedAt:new Date().toISOString(),updatedBy:u.username};
+ statements=[record('booking',after)];entity=`C-${String(folio).padStart(6,'0')}`;label=before?'REAGENDAR CITA':after.status==='confirmed'?'CREAR CITA':'AGREGAR A ESPERA';extra={booking:after};
  }else if(action==='status'||action==='retry'){
  before=s.bookings.find(x=>x.id===b.id);if(!before)fail('Cita no encontrada.',404);
  if(!elevated(u)&&before.team!==u.team)fail('Solo puedes modificar citas de tu equipo.',403);
@@ -97,7 +98,7 @@ export async function POST(req:Request){try{
  after={...before,updatedBy:u.username,updatedAt:new Date().toISOString()};
  if(action==='retry'){
  if(before.status!=='waiting')fail('La cita no está en espera.');validateBooking(before,s);const room=assignRoom(before,s.bookings,s.blocks);
- if(!room)return json({conflict:true,error:'Aún no hay sala disponible.',alternatives:alternatives(before,s.bookings,s.blocks,s.settings)},409);after.room=room.id;after.status='confirmed';label='ASIGNAR DESDE ESPERA';
+ if(!before.outsideOffice&&!room)return json({conflict:true,error:'Aún no hay sala disponible.',alternatives:alternatives(before,s.bookings,s.blocks,s.settings)},409);after.room=room?.id||null;after.status='confirmed';label='ASIGNAR DESDE ESPERA';
  }else{
  if(!['cancelled','attended','deleted'].includes(b.status))fail('Estado inválido.');
  if(b.status==='attended'&&(before.status!=='confirmed'||before.date>today()||(before.date===today()&&minutes(before.time)>minutes(localNow()))))fail('Puedes marcar atendida cuando llegue la hora de una cita confirmada.');
@@ -108,7 +109,7 @@ export async function POST(req:Request){try{
  }else if(action==='block'){
  requireAdmin(u);if(!ROOMS.some(r=>r.id===b.room)||!dateValid(b.date)||!timeValid(b.start)||!timeValid(b.end)||minutes(b.start)>=minutes(b.end)||!clean(b.reason))fail('Revisa sala, fecha, horario y motivo.');
  if(b.date<today()||minutes(b.start)<minutes(s.settings.open)||minutes(b.end)>minutes(s.settings.close))fail('El bloqueo debe ser futuro y estar dentro del horario de atención.');
- if(s.bookings.some(x=>x.date===b.date&&x.room===b.room&&['confirmed','attended'].includes(x.status)&&minutes(x.time)<minutes(b.end)&&minutes(x.time)+x.duration>minutes(b.start)))fail('Hay una cita en ese rango. Reagéndala antes de bloquear.',409);
+ if(s.bookings.some(x=>!x.outsideOffice&&x.date===b.date&&x.room===b.room&&['confirmed','attended'].includes(x.status)&&minutes(x.time)<minutes(b.end)&&minutes(x.time)+x.duration>minutes(b.start)))fail('Hay una cita en ese rango. Reagéndala antes de bloquear.',409);
  if(s.blocks.some(x=>x.date===b.date&&x.room===b.room&&minutes(x.start)<minutes(b.end)&&minutes(x.end)>minutes(b.start)))fail('Ya existe un bloqueo en ese rango.',409);
  after={id:id(),room:b.room,date:b.date,start:b.start,end:b.end,reason:clean(b.reason,500),createdBy:u.username};statements=[record('block',after)];entity=after.id;label='BLOQUEAR SALA';
  }else if(action==='unblock'){

@@ -1,0 +1,245 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ejemplo · Resumen de operaciones</title><style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f5;color:#172b49;font:15px/1.6 system-ui,sans-serif}main{max-width:1100px;margin:40px auto;padding:0 24px}.intro{display:flex;align-items:start;justify-content:space-between;gap:30px}.intro small{color:#406f72;font-weight:700;letter-spacing:.13em}h1{font:40px/1.1 Georgia,serif;margin:12px 0}.intro p{max-width:750px;color:#526579}.intro button{margin-top:30px;border:0;background:#172b49;color:white;border-radius:8px;padding:12px 18px;white-space:nowrap;cursor:pointer}.context{padding:15px 20px;border:1px dashed #a9b9c8;border-radius:10px;color:#526579}.footer{font-size:12px;color:#526579;margin:18px 0 40px}@media(max-width:650px){main{padding:0 12px}.intro{display:block}h1{font-size:32px}.intro button{margin:0 0 18px}}@media print{body{background:white}main{max-width:none;margin:0;padding:0}.intro,.context,.footer{display:none}@page{size:landscape;margin:12mm}}
+/* agenda-modulo-operaciones/modulo/operations-summary/operations.module.css */
+.operations_summary {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid #d6dfe8;
+  border-radius: 14px;
+  background: #fff;
+  color: #172b49;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+.operations_heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.operations_heading h2 {
+  margin: 4px 0 0;
+  font: 600 24px/1.2 Georgia, serif;
+}
+.operations_heading p {
+  margin: 0;
+  color: #4d5e72;
+}
+.operations_heading .operations_eyebrow {
+  color: #365c60;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.operations_totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0 0 24px;
+}
+.operations_totals div {
+  padding: 14px 16px;
+  border-left: 3px solid #4e797b;
+  background: #f3f7f7;
+}
+.operations_totals dt {
+  font-size: 12px;
+  color: #42566b;
+}
+.operations_totals dd {
+  margin: 3px 0;
+  font-size: 29px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.operations_totals small {
+  font-size: 11px;
+  color: #42566b;
+}
+.operations_tableWrap {
+  overflow-x: auto;
+}
+.operations_table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.operations_table caption {
+  text-align: left;
+  color: #4d5e72;
+  padding-bottom: 10px;
+  font-size: 12px;
+}
+.operations_table th,
+.operations_table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid #d6dfe8;
+}
+.operations_table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  background: #edf2f5;
+  vertical-align: bottom;
+}
+.operations_table thead th:first-child {
+  width: 46%;
+}
+.operations_table tbody th {
+  font-weight: 400;
+}
+.operations_table th strong {
+  font-weight: 600;
+}
+.operations_table th small {
+  display: block;
+  font-size: 11px;
+  color: #526579;
+}
+.operations_table td,
+.operations_table th:not(:first-child) {
+  text-align: right;
+}
+.operations_table tfoot {
+  font-weight: 700;
+}
+.operations_table .operations_empty {
+  text-align: center;
+  color: #526579;
+  padding: 24px;
+}
+.operations_note {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: #526579;
+}
+.operations_warning {
+  border-left: 3px solid #926a2d;
+  padding-left: 10px;
+  color: #745010;
+  font-size: 12px;
+}
+.operations_controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+  margin-top: 28px;
+}
+.operations_controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font: 12px system-ui, sans-serif;
+  color: #42566b;
+}
+.operations_controls select {
+  padding: 10px;
+  border: 1px solid #bccbd8;
+  border-radius: 7px;
+  color: #172b49;
+  background: white;
+  font-size: 13px;
+}
+.operations_controls .operations_check {
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 0;
+}
+.operations_controls input {
+  accent-color: #365c60;
+}
+.operations_controls select:focus-visible,
+.operations_controls input:focus-visible {
+  outline: 2px solid #365c60;
+  outline-offset: 3px;
+}
+.operations_metrics {
+  min-width: 0;
+}
+@media screen and (max-width: 650px) {
+  .operations_summary {
+    padding: 16px;
+  }
+  .operations_heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .operations_totals {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .operations_table {
+    min-width: 580px;
+  }
+}
+@media print {
+  .operations_summary {
+    margin-top: 7mm;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    color: #111;
+    background: white;
+    font-size: 9pt;
+  }
+  .operations_heading {
+    break-after: avoid;
+    margin-bottom: 4mm;
+  }
+  .operations_heading h2 {
+    font-size: 15pt;
+  }
+  .operations_heading p {
+    font-size: 9pt;
+  }
+  .operations_totals {
+    break-inside: avoid;
+    gap: 5mm;
+    margin-bottom: 4mm;
+  }
+  .operations_totals div {
+    padding: 2mm 3mm;
+    border: 1px solid #777;
+    background: white;
+  }
+  .operations_totals dd {
+    font-size: 19pt;
+  }
+  .operations_tableWrap {
+    overflow: visible;
+  }
+  .operations_table {
+    min-width: 0;
+  }
+  .operations_table caption {
+    caption-side: top;
+    font-size: 8pt;
+  }
+  .operations_table th,
+  .operations_table td {
+    padding: 2mm;
+  }
+  .operations_table thead {
+    display: table-header-group;
+  }
+  .operations_table thead th,
+  .operations_table th small {
+    font-size: 8pt;
+  }
+  .operations_table tfoot {
+    display: table-row-group;
+  }
+  .operations_table tr {
+    break-inside: avoid;
+  }
+  .operations_note {
+    font-size: 8pt;
+  }
+  .operations_controls {
+    display: none !important;
+  }
+}
+</style></head><body><main><div class="intro"><div><small>COMPLEMENTO PARA LA AGENDA · EJEMPLO</small><h1>¿Qué operaciones tenemos hoy?</h1><p>Este resumen se añade al final de la agenda y del tablero CEO al imprimir. Los horarios, clientes, salas, responsables y bloqueos existentes se conservan.</p></div><button onclick="window.print()">Imprimir ejemplo</button></div><p class="context">En la aplicación, aquí permanece la agenda actual con todas las citas del día. Abajo comienza el nuevo módulo.</p><section class="operations_summary" aria-label="Resumen de operaciones del día"><header class="operations_heading"><div><p class="operations_eyebrow">ACTIVIDAD DEL DESPACHO</p><h2>Resumen de operaciones del día</h2></div><p>22 de septiembre de 2026</p></header><dl class="operations_totals"><div><dt>Citas agendadas</dt><dd>3</dd><small>Pendientes: 1 · Atendidas: 2</small></div><div><dt>Operaciones agendadas</dt><dd>4</dd><small>Pendientes: 2 · Atendidas: 2</small></div><div><dt>Tipos de operación agendados</dt><dd>3</dd><small>Tipos distintos con al menos una cita</small></div></dl><div class="operations_tableWrap"><table class="operations_table"><caption>Frecuencia por tipo · Mayor a menor número de operaciones agendadas</caption><thead><tr><th scope="col">Operación / materia</th><th scope="col">Agendadas</th><th scope="col">Pendientes</th><th scope="col">Atendidas</th><th scope="col">% de operaciones agendadas</th></tr></thead><tbody><tr><th scope="row"><strong>Compraventa CDMX</strong><small>Inmobiliario y patrimonial</small></th><td>2</td><td>1</td><td>1</td><td>50.0%</td></tr><tr><th scope="row"><strong>Poderes</strong><small>Personal, familiar y sucesorio</small></th><td>1</td><td>1</td><td>0</td><td>25.0%</td></tr><tr><th scope="row"><strong>Testamento</strong><small>Personal, familiar y sucesorio</small></th><td>1</td><td>0</td><td>1</td><td>25.0%</td></tr></tbody><tfoot><tr><th scope="row">Total de operaciones</th><td>4</td><td>2</td><td>2</td><td>100.0%</td></tr></tfoot></table></div><p class="operations_note">Agendadas = pendientes + atendidas. Cada tipo cuenta una vez por cita; una cita puede incluir varios tipos. El porcentaje usa el total de operaciones agendadas; puede haber diferencias de redondeo.</p><p class="operations_note">Citas fuera del conteo — canceladas: 1; en espera: 1; eliminadas: 0. Los bloqueos de salas no son operaciones.</p></section>
+<p class="footer">Datos ficticios · Tres citas vigentes, una cancelada y una en espera. Una de las tres citas vigentes contiene dos operaciones. La vista se generó con el mismo componente incluido en el paquete.</p></main></body></html>

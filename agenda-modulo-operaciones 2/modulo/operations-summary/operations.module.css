@@ -1,0 +1,56 @@
+.summary { margin-top: 24px; padding: 24px; border: 1px solid #d6dfe8; border-radius: 14px; background: #fff; color: #172b49; font: 14px/1.5 system-ui, sans-serif; }
+.heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 20px; }
+.heading h2 { margin: 4px 0 0; font: 600 24px/1.2 Georgia, serif; }
+.heading p { margin: 0; color: #4d5e72; }
+.heading .eyebrow { color: #365c60; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 0 0 24px; }
+.totals div { padding: 14px 16px; border-left: 3px solid #4e797b; background: #f3f7f7; }
+.totals dt { font-size: 12px; color: #42566b; }
+.totals dd { margin: 3px 0; font-size: 29px; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.totals small { font-size: 11px; color: #42566b; }
+.tableWrap { overflow-x: auto; }
+.table { border-collapse: collapse; width: 100%; text-align: left; font-variant-numeric: tabular-nums; }
+.table caption { text-align: left; color: #4d5e72; padding-bottom: 10px; font-size: 12px; }
+.table th, .table td { padding: 11px 10px; border-bottom: 1px solid #d6dfe8; }
+.table thead th { font-size: 11px; font-weight: 600; background: #edf2f5; vertical-align: bottom; }
+.table thead th:first-child { width: 46%; }
+.table tbody th { font-weight: 400; }
+.table th strong { font-weight: 600; }
+.table th small { display: block; font-size: 11px; color: #526579; }
+.table td, .table th:not(:first-child) { text-align: right; }
+.table tfoot { font-weight: 700; }
+.table .empty { text-align: center; color: #526579; padding: 24px; }
+.note { margin: 12px 0 0; font-size: 11px; color: #526579; }
+.warning { border-left: 3px solid #926a2d; padding-left: 10px; color: #745010; font-size: 12px; }
+.controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin-top: 28px; }
+.controls label { display: flex; flex-direction: column; gap: 5px; font: 12px system-ui, sans-serif; color: #42566b; }
+.controls select { padding: 10px; border: 1px solid #bccbd8; border-radius: 7px; color: #172b49; background: white; font-size: 13px; }
+.controls .check { flex-direction: row; align-items: center; padding: 10px 0; }
+.controls input { accent-color: #365c60; }
+.controls select:focus-visible, .controls input:focus-visible { outline: 2px solid #365c60; outline-offset: 3px; }
+.metrics { min-width: 0; }
+@media screen and (max-width: 650px) {
+  .summary { padding: 16px; }
+  .heading { align-items: start; flex-direction: column; }
+  .totals { grid-template-columns: 1fr; gap: 8px; }
+  .table { min-width: 580px; }
+}
+@media print {
+  .summary { margin-top: 7mm; padding: 0; border: 0; border-radius: 0; color: #111; background: white; font-size: 9pt; }
+  .heading { break-after: avoid; margin-bottom: 4mm; }
+  .heading h2 { font-size: 15pt; }
+  .heading p { font-size: 9pt; }
+  .totals { break-inside: avoid; gap: 5mm; margin-bottom: 4mm; }
+  .totals div { padding: 2mm 3mm; border: 1px solid #777; background: white; }
+  .totals dd { font-size: 19pt; }
+  .tableWrap { overflow: visible; }
+  .table { min-width: 0; }
+  .table caption { caption-side: top; font-size: 8pt; }
+  .table th, .table td { padding: 2mm; }
+  .table thead { display: table-header-group; }
+  .table thead th, .table th small { font-size: 8pt; }
+  .table tfoot { display: table-row-group; }
+  .table tr { break-inside: avoid; }
+  .note { font-size: 8pt; }
+  .controls { display: none !important; }
+}

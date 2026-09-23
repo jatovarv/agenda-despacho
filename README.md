@@ -1,6 +1,8 @@
 # Agenda del despacho «MEMO» — README técnico de implementación nativa en Windows
 
 Repositorio: <https://github.com/jatovarv/agenda-despacho>.
+ATENCION: Branch creado con Patch 2.0 para métricas.
+Aplicar y revisar el pull request
 
 ## 1. Decisión de arquitectura y estado
 

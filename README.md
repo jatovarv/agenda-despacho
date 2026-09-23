@@ -1,5 +1,7 @@
 # Agenda del despacho "MEMO" · Servidor propio
 
+LEER PRIORITARIAMENTE AQUI: docs/README-TECNICO-WINDOWS.md
+
 Aplicación de reservas de salas con usuarios individuales, equipos, asignación automática, 44 operaciones notariales, bloqueos, lista de espera, métricas y auditoría.
 
 **Implementación recomendada: Windows nativo, sin Docker.** Los desarrolladores deben seguir el [README técnico de implementación y operación](docs/README-TECNICO-WINDOWS.md): arquitectura, contrato HTTP, reglas de negocio, Node.js 24 + SQLite, arranque automático, respaldos, restauración, actualizaciones, migración y pruebas de aceptación.

@@ -1,0 +1,4 @@
+Agenda del despacho
+Commit base: d0cafb56450b5d013701b944f8c1050d1971dfe1
+Parche de referencia generado el 2026-09-22.
+No reemplazar app/page.tsx completo: usar git apply --check o la guía manual.

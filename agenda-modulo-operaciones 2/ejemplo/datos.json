@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-22",
+  "catalog": [
+    { "id": "op-4-2", "name": "Compraventa CDMX", "matter": "Inmobiliario y patrimonial", "active": true },
+    { "id": "op-3-4", "name": "Poderes", "matter": "Personal, familiar y sucesorio", "active": true },
+    { "id": "op-3-1", "name": "Testamento", "matter": "Personal, familiar y sucesorio", "active": true },
+    { "id": "op-5-9", "name": "Certificación de copias con su original", "matter": "Fe pública y certificaciones", "active": true }
+  ],
+  "bookings": [
+    { "id": "ejemplo-1", "date": "2026-09-22", "status": "confirmed", "operationIds": ["op-4-2", "op-3-4"] },
+    { "id": "ejemplo-2", "date": "2026-09-22", "status": "attended", "operationIds": ["op-4-2"] },
+    { "id": "ejemplo-3", "date": "2026-09-22", "status": "attended", "operationIds": ["op-3-1"] },
+    { "id": "ejemplo-4", "date": "2026-09-22", "status": "cancelled", "operationIds": ["op-4-2"] },
+    { "id": "ejemplo-5", "date": "2026-09-22", "status": "waiting", "operationIds": ["op-3-4"] }
+  ]
+}

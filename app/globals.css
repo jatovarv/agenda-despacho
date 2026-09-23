@@ -10,3 +10,5 @@
 [data-slot='sidebar-inset'],.workspace,.panel,.page-heading>div{min-width:0}.main-sidebar [data-sidebar='menu-button']{font-size:.875rem}.field>span,.operation-option,.catalog-row{font-size:.875rem}
 @media print{.print-date{display:block!important;font-size:1rem;margin-bottom:15px}}
 .print-date{display:none}
+
+.location-check{margin:0 0 18px}.outside-label{display:flex;align-items:center;gap:6px;color:#426187!important;margin-bottom:8px}.outside-board{margin-top:22px}

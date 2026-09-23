@@ -10,7 +10,7 @@ Aplicar y revisar el pull request****
 
 Implementar la aplicación existente en **una PC Windows con Node.js 24 y SQLite**, con acceso desde los navegadores de la red del despacho. GitHub guarda código/versiones; la PC ejecuta la aplicación y conserva la información. Priorizar funcionalidad, eficacia y mantenimiento sencillo.
 
-**Este documento es la especificación técnica y el procedimiento de instalación.** El servidor nativo existe; las plantillas Windows incluidas deben guardarse, instalarse y verificarse en la PC. No son un instalador ya ejecutado. El despliegue en Windows y la migración desde Sites siguen pendientes de validación.
+**Este documento es la especificación técnica y el procedimiento de instalación.** Instalar en El servidor nativo ; las plantillas Windows incluidas deben guardarse, instalarse y verificarse en la PC. No son un instalador ya ejecutado. El despliegue en Windows y la migración desde Sites siguen pendientes de validación.
 
 Código contrastado con `ea72db7e1cf56a8a52c0ac1ab1efcaf1eb00e878`; el cambio posterior observado en GitHub modifica únicamente el README. Los scripts actuales `Iniciar-Windows.cmd`, `Instalar-Windows.ps1`, `Respaldar-Windows.ps1` y `Restaurar-Windows.ps1` corresponden a Docker: **no usarlos para la ruta nativa descrita aquí**. Docker queda como alternativa secundaria.
 
@@ -475,7 +475,7 @@ Rollback: detener, recuperar código/configuración y, si cambió esquema, backu
 
 ## 10. Migración desde Sites: trabajo pendiente
 
-El repositorio no trae ni sincroniza datos del sitio anterior. No existe importador D1 listo. Desarrollar y ensayar:
+El repositorio no trae ni sincroniza datos del sitio anterior. No existe importador D1 listo. Desarrollar y ensayar solo de ser necesario:
 
 1. Exportación completa, autorizada y consistente; congelar capturas durante el corte final.
 2. Inventariar esquema/conteos/relaciones JSON: `records`, `users`, `audit`, `revision` y auxiliares.

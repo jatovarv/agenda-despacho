@@ -115,6 +115,10 @@ export async function POST(req:Request){try{
  requireAdmin(u);before=s.blocks.find(x=>x.id===b.id);if(!before)fail('Bloqueo no encontrado.');statements=[db().prepare('DELETE FROM records WHERE id=? AND kind=?').bind(b.id,'block')];entity=b.id;label='DESBLOQUEAR SALA';
  }else if(action==='team'){
  requireAdmin(u);if(!clean(b.name))fail('Indica el nombre del equipo.');before=s.teams.find(x=>x.id===b.id)||null;after={id:before?.id||id(),name:clean(b.name)};statements=[record('team',after)];entity=after.name;label=before?'EDITAR EQUIPO':'CREAR EQUIPO';
+ }else if(action==='deleteTeam'){
+ requireAdmin(u);before=s.teams.find(x=>x.id===b.id);if(!before)fail('Equipo no encontrado.');
+ if(s.users.some(x=>x.team===b.id))fail('El equipo tiene usuarios. Reasígnalos o bórralos primero.');
+ statements=[db().prepare('DELETE FROM records WHERE id=? AND kind=?').bind(b.id,'team')];entity=before.name;label='BORRAR EQUIPO';after=null;
  }else if(action==='users'){
  requireAdmin(u);if(!s.teams.some(x=>x.id===b.team))fail('Selecciona un equipo.');const names=clean(b.names,3000).split(/[\n,;]/).map((x:string)=>x.trim().toUpperCase()).filter(Boolean);
  if(!names.length||names.length>30||new Set(names).size!==names.length||names.some((n:string)=>!/^[A-Z0-9._-]{2,30}$/.test(n)))fail('Usa de 1 a 30 usuarios únicos, de 2 a 30 letras, números, puntos o guiones.');
@@ -128,6 +132,13 @@ export async function POST(req:Request){try{
  if(before.id===u.id&&(!b.active||b.role!==u.role))fail('No puedes desactivar ni cambiar el rol de tu propia cuenta.');
  if(before.role==='ceo'&&(!b.active||b.role!=='ceo')&&s.users.filter((x:any)=>x.role==='ceo'&&x.active).length<2)fail('Debe quedar al menos un CEO activo.');
  after={...before,name:clean(b.name),team:b.team,role:b.role,active:b.active?1:0};statements=[db().prepare('UPDATE users SET name=?,team=?,role=?,active=? WHERE id=?').bind(after.name,after.team,after.role,after.active,b.id),db().prepare('DELETE FROM sessions WHERE user_id=?').bind(b.id)];entity=before.username;label='EDITAR USUARIO';
+ }else if(action==='deleteUser'){
+ requireAdmin(u);before=s.users.find((x:any)=>x.id===b.id);if(!before)fail('Usuario no encontrado.');
+ if(before.id===u.id)fail('No puedes borrar tu propia cuenta.');
+ if(before.role==='ceo'&&s.users.filter((x:any)=>x.role==='ceo'&&x.active).length<2)fail('Debe quedar al menos un CEO activo.');
+ const hasFutureAppointments=s.bookings.some((x:any)=>x.attendee===b.id&&x.date>=new Date().toISOString().slice(0,10));
+ if(hasFutureAppointments)fail('El usuario tiene citas futuras asignadas. Reasígnalas antes de borrarlo.');
+ statements=[db().prepare('DELETE FROM users WHERE id=?').bind(b.id),db().prepare('DELETE FROM sessions WHERE user_id=?').bind(b.id)];entity=before.username;label='BORRAR USUARIO';after=null;
  }else if(action==='resetPassword'){
  requireAdmin(u);before=s.users.find((x:any)=>x.id===b.id);if(!before)fail('Usuario no encontrado.');if(before.id===u.id)fail('Utiliza Cambiar mi contraseña.');const password=token().slice(0,16)+'!aA';statements=[db().prepare('UPDATE users SET hash=?,must_change=1 WHERE id=?').bind(await hashPassword(password),b.id),db().prepare('DELETE FROM sessions WHERE user_id=?').bind(b.id)];entity=before.username;label='RESTABLECER CONTRASEÑA';after={mustChange:true};before=null;extra={credentials:[{username:entity,password}]};
  }else if(action==='password'){

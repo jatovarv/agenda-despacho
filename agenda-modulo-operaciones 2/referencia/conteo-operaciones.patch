@@ -1,0 +1,363 @@
+diff --git a/app/page.tsx b/app/page.tsx
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -1,4 +1,7 @@
+ 'use client';
+ import {useEffect,useState,useCallback} from 'react';
++import {DailyOperationsSummary} from '@/modules/operations-summary/OperationsSummary';
++import {OperationsMetrics} from '@/modules/operations-summary/OperationsMetrics';
++import {useDayPrinting} from '@/modules/operations-summary/useDayPrinting';
+ import {CalendarDays,Plus,Users,DoorOpen,Clock3,BarChart3,ShieldCheck,LayoutDashboard,LogOut,ArrowUpRight,ChevronLeft,ChevronRight,Printer,Accessibility,Check,Ellipsis,LockKeyhole,Download,Search,X,RefreshCw,KeyRound,Building2,FileText,CalendarClock} from 'lucide-react';
+ import {Sidebar,SidebarProvider,SidebarContent,SidebarHeader,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarInset,SidebarTrigger} from '@/components/ui/sidebar';
+@@ -27,4 +30,5 @@
+ 
+ export default function App(){
++ const printingDay=useDayPrinting();
+  const [data,setData]=useState<Data|null>(null),[loadError,setLoadError]=useState(''),[view,setView]=useState('agenda'),[date,setDate]=useState(today()),[search,setSearch]=useState(''),[roomFilter,setRoomFilter]=useState('all'),[dialog,setDialog]=useState(''),[editing,setEditing]=useState<any>(null),[busy,setBusy]=useState(false),[confirm,setConfirm]=useState<any>(null),[reason,setReason]=useState(''),[audit,setAudit]=useState<any[]>([]),[credentials,setCredentials]=useState<any[]>([]),[period,setPeriod]=useState('30'),[auditSearch,setAuditSearch]=useState('');
+  const refresh=useCallback(async()=>{try{setData(await api());setLoadError('');}catch(e:any){setLoadError(e.message);}},[]);
+@@ -48,5 +52,5 @@
+  if(data.user.mustChange)return <><div className="loading"><KeyRound size={32}/><h1>Crea tu contraseña</h1><p>Tu contraseña temporal debe cambiarse antes de acceder.</p><PasswordForm mutate={mutate} busy={busy}/></div><Toaster richColors/></>;
+  const books=data.bookings.filter((b:any)=>b.status!=='deleted'),day=books.filter((b:any)=>b.date===date),active=day.filter((b:any)=>['confirmed','attended'].includes(b.status)),wait=books.filter((b:any)=>b.status==='waiting');
+- const selected=day.filter((b:any)=>b.status!=='waiting'&&(roomFilter==='all'||b.room===roomFilter)&&[b.client,folio(b),b.attendeeName,b.teamName,...b.operations.map((o:any)=>o.name)].join(' ').toLowerCase().includes(search.toLowerCase())).sort((a:any,b:any)=>a.time.localeCompare(b.time));
++ const selected=day.filter((b:any)=>b.status!=='waiting'&&(printingDay||((roomFilter==='all'||b.room===roomFilter)&&[b.client,folio(b),b.attendeeName,b.teamName,...b.operations.map((o:any)=>o.name)].join(' ').toLowerCase().includes(search.toLowerCase())))).sort((a:any,b:any)=>a.time.localeCompare(b.time));
+  const canEdit=(b:any)=>admin||b.team===data.user.team;
+  const menu=[{id:'agenda',label:'Agenda del día',icon:CalendarDays},{id:'waiting',label:'Lista de espera',icon:Clock3,count:wait.length},{id:'metrics',label:'Métricas',icon:BarChart3},...(admin?[{id:'ceo',label:'Vista CEO',icon:LayoutDashboard},{id:'blocks',label:'Bloqueo de salas',icon:LockKeyhole},{id:'admin',label:'Administración',icon:ShieldCheck}]:[])];
+@@ -58,5 +62,5 @@
+  {loadError&&<div role="alert" className="notice error">{loadError} <button onClick={refresh}>Reintentar</button></div>}
+  {['agenda','ceo'].includes(view)&&<><div className="stats-grid"><Stat label="Citas del día" value={active.length} note={`${active.filter((b:any)=>b.status==='attended').length} atendidas`} icon={CalendarDays}/><Stat label="Personas previstas" value={active.reduce((n:number,b:any)=>n+b.people,0)} note="Incluye a quienes atienden" icon={Users}/><Stat label="Salas con citas" value={`${new Set(active.map((b:any)=>b.room)).size} / 5`} note="Con reservas en esta fecha" icon={DoorOpen}/><Stat label="En espera" value={wait.filter((b:any)=>b.date===date).length} note="Pendientes de asignar sala" icon={Clock3}/></div><div className="section-toolbar"><div className="date-control"><button aria-label="Día anterior" onClick={()=>setDate(shiftDate(date,-1))}><ChevronLeft size={18}/></button><input aria-label="Fecha de agenda" type="date" value={date} onChange={e=>e.target.value&&setDate(e.target.value)}/><button aria-label="Día siguiente" onClick={()=>setDate(shiftDate(date,1))}><ChevronRight size={18}/></button><button className="today-button" onClick={()=>setDate(today())}>Hoy</button></div><span className="date-label">{dateLabel(date)}</span></div></>}
+- {view==='agenda'&&<><div className="rooms-strip">{ROOMS.map(r=>{const n=active.filter((b:any)=>b.room===r.id).length;const blocks=data.blocks.filter((b:any)=>b.date===date&&b.room===r.id);return <button key={r.id} className={`room-summary ${roomFilter===r.id?'selected':''}`} onClick={()=>setRoomFilter(roomFilter===r.id?'all':r.id)} style={{'--room-color':r.color} as any}><div className="room-top"><span className="room-line"/><strong>{r.name.replace('Sala ','')}</strong>{r.accessible&&<Accessibility size={15}/>}</div><span><Users size={14}/>{r.capacity} personas</span><small>{n} {n===1?'cita':'citas'}{blocks.length?` · ${blocks.length} bloqueo(s)`:''}</small></button>})}</div><section className="panel"><div className="panel-heading"><div><h2>Citas programadas <span className="count">{selected.length}</span></h2><p>Horarios de Ciudad de México</p></div><div className="search"><Search size={17}/><input aria-label="Buscar citas" placeholder="Buscar cliente, folio u operación" value={search} onChange={e=>setSearch(e.target.value)}/></div></div>{roomFilter!=='all'&&<div className="filter-note">{roomName(roomFilter)}<button className="text-button" onClick={()=>setRoomFilter('all')}>Ver todas <X size={14}/></button></div>}{selected.length?<Table><TableHeader><TableRow>{['HORARIO','CLIENTE / OPERACIÓN','SALA','ATIENDE','PERSONAS','ESTADO',''].map((h,i)=><TableHead key={i}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{selected.map((b:any)=><TableRow key={b.id}><TableCell><strong className="time">{b.time}</strong><small>hasta {clock(minutes(b.time)+b.duration)}</small></TableCell><TableCell className="client-cell"><strong>{b.client}</strong><small>{b.operations.map((o:any)=>o.name).join(' · ')}</small><span className="folio">{folio(b)}</span></TableCell><TableCell><span className="room-tag" style={{color:ROOMS.find(r=>r.id===b.room)?.color}}>{roomName(b.room)}</span></TableCell><TableCell><strong>{b.attendeeName}</strong><small>{b.teamName}</small></TableCell><TableCell><div className="flex"><Users size={15}/>{b.people}{b.accessibility&&<Accessibility size={17} aria-label="Prioridad por discapacidad"/>}</div></TableCell><TableCell><Badge status={b.status}/></TableCell><TableCell><DropdownMenu><DropdownMenuTrigger asChild><button className="icon-button" aria-label={`Acciones ${folio(b)}`}><Ellipsis size={20}/></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={()=>pdf(b,window.open('','_blank'))}><Printer size={16}/>PDF de confirmación</DropdownMenuItem>{canEdit(b)&&b.status==='confirmed'&&<><DropdownMenuItem onClick={()=>reserve(b)}>Editar / reagendar</DropdownMenuItem><DropdownMenuItem onClick={()=>mutate({action:'status',id:b.id,status:'attended'},'Cita marcada como atendida')}><Check size={16}/>Marcar atendida</DropdownMenuItem><DropdownMenuItem onClick={()=>{setConfirm({action:'status',id:b.id,status:'cancelled',label:`Cancelar ${folio(b)}`});setReason('');}}>Cancelar cita</DropdownMenuItem></>}{admin&&b.status==='cancelled'&&<DropdownMenuItem onClick={()=>{setConfirm({action:'status',id:b.id,status:'deleted',label:`Eliminar ${folio(b)}`});setReason('');}}>Eliminar de la agenda</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></TableCell></TableRow>)}</TableBody></Table>:<Blank title="El día está listo para tus clientes" description="Registra una cita y la agenda encontrará la sala adecuada."><button className="button primary" onClick={()=>reserve()}><Plus size={17}/>Reservar una sala</button></Blank>}</section><div className="assignment-note"><Accessibility size={19}/><p><b>Asignación automática.</b> La sala más pequeña disponible para el grupo. Con discapacidad, se priorizan Barra y Anexo Not., respetando su capacidad.</p></div></>}
++ {view==='agenda'&&<><div className="rooms-strip">{ROOMS.map(r=>{const n=active.filter((b:any)=>b.room===r.id).length;const blocks=data.blocks.filter((b:any)=>b.date===date&&b.room===r.id);return <button key={r.id} className={`room-summary ${roomFilter===r.id?'selected':''}`} onClick={()=>setRoomFilter(roomFilter===r.id?'all':r.id)} style={{'--room-color':r.color} as any}><div className="room-top"><span className="room-line"/><strong>{r.name.replace('Sala ','')}</strong>{r.accessible&&<Accessibility size={15}/>}</div><span><Users size={14}/>{r.capacity} personas</span><small>{n} {n===1?'cita':'citas'}{blocks.length?` · ${blocks.length} bloqueo(s)`:''}</small></button>})}</div><section className="panel"><div className="panel-heading"><div><h2>Citas programadas <span className="count">{selected.length}</span></h2><p>Horarios de Ciudad de México</p></div><div className="search"><Search size={17}/><input aria-label="Buscar citas" placeholder="Buscar cliente, folio u operación" value={search} onChange={e=>setSearch(e.target.value)}/></div></div>{!printingDay&&roomFilter!=='all'&&<div className="filter-note">{roomName(roomFilter)}<button className="text-button" onClick={()=>setRoomFilter('all')}>Ver todas <X size={14}/></button></div>}{selected.length?<Table><TableHeader><TableRow>{['HORARIO','CLIENTE / OPERACIÓN','SALA','ATIENDE','PERSONAS','ESTADO',''].map((h,i)=><TableHead key={i}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{selected.map((b:any)=><TableRow key={b.id}><TableCell><strong className="time">{b.time}</strong><small>hasta {clock(minutes(b.time)+b.duration)}</small></TableCell><TableCell className="client-cell"><strong>{b.client}</strong><small>{b.operations.map((o:any)=>o.name).join(' · ')}</small><span className="folio">{folio(b)}</span></TableCell><TableCell><span className="room-tag" style={{color:ROOMS.find(r=>r.id===b.room)?.color}}>{roomName(b.room)}</span></TableCell><TableCell><strong>{b.attendeeName}</strong><small>{b.teamName}</small></TableCell><TableCell><div className="flex"><Users size={15}/>{b.people}{b.accessibility&&<Accessibility size={17} aria-label="Prioridad por discapacidad"/>}</div></TableCell><TableCell><Badge status={b.status}/></TableCell><TableCell><DropdownMenu><DropdownMenuTrigger asChild><button className="icon-button" aria-label={`Acciones ${folio(b)}`}><Ellipsis size={20}/></button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={()=>pdf(b,window.open('','_blank'))}><Printer size={16}/>PDF de confirmación</DropdownMenuItem>{canEdit(b)&&b.status==='confirmed'&&<><DropdownMenuItem onClick={()=>reserve(b)}>Editar / reagendar</DropdownMenuItem><DropdownMenuItem onClick={()=>mutate({action:'status',id:b.id,status:'attended'},'Cita marcada como atendida')}><Check size={16}/>Marcar atendida</DropdownMenuItem><DropdownMenuItem onClick={()=>{setConfirm({action:'status',id:b.id,status:'cancelled',label:`Cancelar ${folio(b)}`});setReason('');}}>Cancelar cita</DropdownMenuItem></>}{admin&&b.status==='cancelled'&&<DropdownMenuItem onClick={()=>{setConfirm({action:'status',id:b.id,status:'deleted',label:`Eliminar ${folio(b)}`});setReason('');}}>Eliminar de la agenda</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></TableCell></TableRow>)}</TableBody></Table>:<Blank title="El día está listo para tus clientes" description="Registra una cita y la agenda encontrará la sala adecuada."><button className="button primary" onClick={()=>reserve()}><Plus size={17}/>Reservar una sala</button></Blank>}</section><div className="assignment-note"><Accessibility size={19}/><p><b>Asignación automática.</b> La sala más pequeña disponible para el grupo. Con discapacidad, se priorizan Barra y Anexo Not., respetando su capacidad.</p></div></>}
+  {view==='ceo'&&<div className="ceo-board">{ROOMS.map(r=><section className="room-column" key={r.id} style={{'--room-color':r.color} as any}><header><DoorOpen size={20}/><h2>{r.name}</h2><span>{r.capacity} personas{r.accessible?' · Prioridad accesible':''}</span></header><div className="column-content">{[...active.filter((b:any)=>b.room===r.id).map((b:any)=>({...b,sort:b.time})),...data.blocks.filter((b:any)=>b.date===date&&b.room===r.id).map((b:any)=>({...b,sort:b.start,blocked:true}))].sort((a:any,b:any)=>a.sort.localeCompare(b.sort)).map((b:any)=>b.blocked?<div key={b.id} className="blocked-card"><LockKeyhole size={17}/><strong>{b.start}–{b.end}</strong><p>{b.reason}</p><small>Bloqueada · {b.createdBy}</small></div>:cards(b))}{!active.some((b:any)=>b.room===r.id)&&!data.blocks.some((b:any)=>b.date===date&&b.room===r.id)&&<div className="room-empty"><CalendarClock size={25}/><p>Sin citas ni bloqueos</p></div>}</div></section>)}</div>}
+  {view==='waiting'&&<section className="panel"><div className="panel-heading"><h2>{wait.length} solicitudes en espera</h2><button className="button secondary" onClick={refresh}><RefreshCw size={16}/>Actualizar</button></div>{wait.length?<div className="wait-grid">{wait.sort((a:any,b:any)=>(a.date+a.time).localeCompare(b.date+b.time)).map((b:any)=><div className="wait-item" key={b.id}>{cards(b)}<p className="wait-date">{b.date} · {b.people>16?'El grupo supera la capacidad máxima':roomName(b.room)}</p>{canEdit(b)&&<div className="button-row"><button className="button primary" disabled={busy} onClick={async()=>{const p=window.open('','_blank');const r=await mutate({action:'retry',id:b.id},'Sala asignada');if(r?.booking)await pdf(r.booking,p);else{p?.close();if(r?.conflict)reserve(b);}}}>Intentar asignar</button><button className="button secondary" onClick={()=>reserve(b)}>Reagendar</button><button className="text-button" onClick={()=>{setConfirm({action:'status',id:b.id,status:'cancelled',label:`Cancelar ${folio(b)}`});setReason('');}}>Cancelar</button></div>}</div>)}</div>:<Blank title="Ninguna solicitud pendiente" description="Las citas sin sala se podrán recuperar desde aquí."/>}</section>}
+@@ -64,4 +68,5 @@
+  {view==='blocks'&&admin&&<section className="panel"><div className="panel-heading"><h2>Bloqueos de salas</h2><button className="button primary" onClick={()=>setDialog('block')}><Plus size={17}/>Crear bloqueo</button></div>{data.blocks.length?<Table><TableHeader><TableRow>{['SALA','FECHA','HORARIO','MOTIVO','CREÓ',''].map((x,i)=><TableHead key={i}>{x}</TableHead>)}</TableRow></TableHeader><TableBody>{[...data.blocks].sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start)).map(b=><TableRow key={b.id}><TableCell>{roomName(b.room)}</TableCell><TableCell>{b.date}</TableCell><TableCell>{b.start}–{b.end}</TableCell><TableCell>{b.reason}</TableCell><TableCell>{b.createdBy}</TableCell><TableCell><button className="text-button" onClick={()=>{setConfirm({action:'unblock',id:b.id,label:'Quitar bloqueo'});setReason('');}}>Desbloquear</button></TableCell></TableRow>)}</TableBody></Table>:<Blank title="Todas las salas habilitadas" description="Los bloqueos excluyen una sala de la asignación durante el rango indicado."/>}</section>}
+  {view==='admin'&&admin&&<Tabs defaultValue="teams" className="admin-tabs"><TabsList><TabsTrigger value="teams">Equipos y usuarios</TabsTrigger><TabsTrigger value="catalog">Catálogo</TabsTrigger><TabsTrigger value="audit">Auditoría</TabsTrigger><TabsTrigger value="settings">Configuración</TabsTrigger></TabsList><TabsContent value="teams"><section className="panel"><div className="panel-heading"><div><h2>Un equipo, cuentas individuales</h2><p>Alta rápida: crea el equipo y pega las iniciales de sus integrantes.</p></div><div className="button-row"><button className="button secondary" onClick={()=>{setEditing(null);setDialog('team');}}>Nuevo equipo</button><button className="button primary" onClick={()=>setDialog('users')}><Plus size={16}/>Agregar usuarios</button></div></div>{data.teams.map((t:any)=><div className="team-section" key={t.id}><div className="flex-between"><h3><Building2 size={18}/>{t.name}<span className="count">{data.users.filter((u:any)=>u.team===t.id).length}</span></h3><button className="text-button" onClick={()=>{setEditing(t);setDialog('team');}}>Editar nombre</button></div><div className="user-grid">{data.users.filter((u:any)=>u.team===t.id).map((u:any)=><button className="user-card" key={u.id} onClick={()=>{setEditing(u);setDialog('user');}}><span className="avatar light">{u.username.slice(0,2)}</span><span><b>{u.username}</b><small>{u.name} · {u.role==='staff'?'Equipo':u.role.toUpperCase()}</small><small>{u.active?'Activo':'Desactivado'}{u.mustChange?' · Contraseña temporal':''}</small></span><ArrowUpRight size={16}/></button>)}</div></div>)}</section></TabsContent><TabsContent value="catalog"><section className="panel"><div className="panel-heading"><div><h2>Catálogo de operaciones</h2><p>44 operaciones originales del PDF. La agrupación por materia es organizativa.</p></div><button className="button primary" onClick={()=>{setEditing(null);setDialog('operation');}}><Plus size={16}/>Agregar operación</button></div>{[...new Set(data.operations.map((o:any)=>o.matter))].map((matter:any)=><div className="catalog-section" key={matter}><h3>{matter}</h3>{data.operations.filter((o:any)=>o.matter===matter).map((o:any)=><div className="catalog-row" key={o.id}><span>{o.name}{!o.active&&<small> · Inactiva</small>}</span><button className="text-button" onClick={()=>{setEditing(o);setDialog('operation');}}>Editar</button></div>)}</div>)}</section></TabsContent><TabsContent value="audit"><section className="panel"><div className="panel-heading"><div><h2>Historial de acciones</h2><p>Registro de usuario, momento, valores anteriores y nuevos.</p></div><div className="button-row"><button className="button secondary" onClick={loadAudit}><RefreshCw size={16}/>Actualizar</button><button className="button primary" disabled={busy} onClick={()=>download('Excel')}><Download size={16}/>Exportar Excel</button></div></div><div className="audit-search search"><Search size={17}/><input placeholder="Buscar usuario, acción o folio" aria-label="Buscar auditoría" value={auditSearch} onChange={e=>setAuditSearch(e.target.value)}/></div><Table><TableHeader><TableRow>{['FECHA / HORA CDMX','USUARIO','ACCIÓN','REGISTRO',''].map((x,i)=><TableHead key={i}>{x}</TableHead>)}</TableRow></TableHeader><TableBody>{audit.filter(a=>[a.actor,a.action,a.entity].join(' ').toLowerCase().includes(auditSearch.toLowerCase())).map(a=><TableRow key={a.id}><TableCell>{when(a.at)}<small>#{a.id}</small></TableCell><TableCell><b>{a.actor}</b></TableCell><TableCell>{a.action}</TableCell><TableCell>{a.entity}</TableCell><TableCell><button className="text-button" onClick={()=>{setEditing(a);setDialog('audit');}}>Ver detalle</button></TableCell></TableRow>)}</TableBody></Table></section></TabsContent><TabsContent value="settings"><section className="panel settings-panel"><h2>Configuración del despacho</h2><SettingsForm data={data} mutate={mutate} busy={busy}/></section></TabsContent></Tabs>}
++ {['agenda','ceo'].includes(view)&&<DailyOperationsSummary bookings={data.bookings} catalog={data.operations} date={date}/>}
+  <footer className="workspace-footer"><span>{data.settings.name}</span><span>Horario {data.settings.open}–{data.settings.close} · Ciudad de México</span></footer></main></SidebarInset>
+  <Dialog open={!!dialog} onOpenChange={open=>{if(!open&&!busy){setDialog('');setCredentials([]);}}}><DialogContent className={dialog==='booking'?'booking-dialog':'standard-dialog'}><DialogHeader><DialogTitle>{{booking:editing?'Editar / reagendar cita':'Reservar una sala',block:'Bloquear sala',team:editing?'Editar equipo':'Crear equipo',users:'Alta rápida de usuarios',user:'Editar usuario',operation:editing?'Editar operación':'Agregar operación',password:'Cambiar mi contraseña',credentials:'Accesos creados',audit:'Detalle de auditoría'}[dialog]}</DialogTitle><DialogDescription>{dialog==='booking'?'Captura la atención. Nosotros encontramos el espacio.':dialog==='credentials'?'Copia estos accesos ahora. Las contraseñas se muestran una sola vez.':dialog==='audit'?`${editing?.actor} · ${editing&&when(editing.at)}`:'Los cambios quedarán registrados en la auditoría.'}</DialogDescription></DialogHeader>
+@@ -104,4 +109,4 @@
+  const ops=[...new Map([...data.operations,...attended.flatMap((b:any)=>b.operations)].map((o:any)=>[o.id,o])).values()].map((o:any)=>({...o,count:attended.filter((b:any)=>b.operationIds.includes(o.id)).length})).sort((a:any,b:any)=>b.count-a.count||a.name.localeCompare(b.name));
+  const [order,setOrder]=useState('most');const ordered=order==='most'?ops:[...ops].sort((a,b)=>a.count-b.count||a.name.localeCompare(b.name));
+- return <><div className="section-toolbar"><Tabs value={period} onValueChange={setPeriod}><TabsList><TabsTrigger value="7">7 días</TabsTrigger><TabsTrigger value="30">30 días</TabsTrigger><TabsTrigger value="all">Todo el historial</TabsTrigger></TabsList></Tabs>{admin&&<div className="button-row"><button className="button secondary" disabled={busy} onClick={()=>download('CSV')}><Download size={16}/>Log completo CSV</button><button className="button primary" disabled={busy} onClick={()=>download('Excel')}><FileText size={16}/>Excel con auditoría</button></div>}</div><p className="period-note">{period==='all'?'Desde el inicio':`${start} a ${end}`} · Las exportaciones incluyen todo el historial, también citas futuras, cancelaciones y eliminaciones.</p><div className="stats-grid"><Stat label="Citas totales" value={scheduled.length} note={`${attended.length} atendidas · ${all.filter((b:any)=>b.status==='cancelled').length} canceladas`} icon={CalendarDays}/><Stat label="Personas recibidas" value={people} note="En citas atendidas; incluye personal" icon={Users}/><Stat label="Promedio por cita" value={attended.length?(people/attended.length).toFixed(1):'0'} note="Personas por cita atendida" icon={BarChart3}/><Stat label="Operaciones atendidas" value={attended.reduce((n:number,b:any)=>n+b.operations.length,0)} note="Una cita puede tener varias" icon={FileText}/></div><div className="metrics-grid"><section className="panel"><div className="panel-heading"><div><h2>Operaciones atendidas</h2><p>Frecuencia por operación · incluye las de cero atenciones</p></div><Choice value={order} onChange={setOrder} options={[{value:'most',label:'Más atendidas'},{value:'least',label:'Menos atendidas'}]}/></div><div className="ranking">{ordered.map((o:any,i:number)=><div className="ranking-row" key={o.id}><span className="rank">{String(i+1).padStart(2,'0')}</span><div><div className="flex-between"><span>{o.name}</span><b>{o.count}</b></div><div className="bar-track"><i style={{width:`${o.count/Math.max(1,...ops.map((p:any)=>p.count))*100}%`}}/></div><small>{o.matter}</small></div></div>)}</div></section><div className="metrics-right"><section className="panel"><div className="panel-heading"><div><h2>Uso por sala</h2><p>Citas y horas reservadas</p></div><DoorOpen size={20}/></div><div className="room-usage">{ROOMS.map(r=>{const rows=scheduled.filter((b:any)=>b.room===r.id);return <div key={r.id}><div className="flex-between"><strong>{r.name}</strong><b>{rows.length} citas</b></div><div className="bar-track"><i style={{width:`${rows.length/Math.max(1,scheduled.length)*100}%`,background:r.color}}/></div><small>{(rows.reduce((n:number,b:any)=>n+b.duration,0)/60).toFixed(1)} horas · {rows.filter((b:any)=>b.status==='attended').length} atendidas</small></div>})}</div></section><section className="panel"><div className="panel-heading"><div><h2>Atención por integrante</h2><p>Citas registradas y atendidas</p></div><Users size={20}/></div><Table><TableHeader><TableRow><TableHead>PERSONA</TableHead><TableHead>CITAS</TableHead><TableHead>ATENDIDAS</TableHead></TableRow></TableHeader><TableBody>{data.users.map((u:any)=><TableRow key={u.id}><TableCell><b>{u.name}</b><small>{data.teams.find((t:any)=>t.id===u.team)?.name}</small></TableCell><TableCell>{scheduled.filter((b:any)=>b.attendee===u.id).length}</TableCell><TableCell>{attended.filter((b:any)=>b.attendee===u.id).length}</TableCell></TableRow>)}</TableBody></Table></section></div></div></>;
++ return <><div className="section-toolbar"><Tabs value={period} onValueChange={setPeriod}><TabsList><TabsTrigger value="7">7 días</TabsTrigger><TabsTrigger value="30">30 días</TabsTrigger><TabsTrigger value="all">Todo el historial</TabsTrigger></TabsList></Tabs>{admin&&<div className="button-row"><button className="button secondary" disabled={busy} onClick={()=>download('CSV')}><Download size={16}/>Log completo CSV</button><button className="button primary" disabled={busy} onClick={()=>download('Excel')}><FileText size={16}/>Excel con auditoría</button></div>}</div><p className="period-note">{period==='all'?'Desde el inicio':`${start} a ${end}`} · Las exportaciones incluyen todo el historial, también citas futuras, cancelaciones y eliminaciones.</p><div className="stats-grid"><Stat label="Citas totales" value={scheduled.length} note={`${attended.length} atendidas · ${all.filter((b:any)=>b.status==='cancelled').length} canceladas`} icon={CalendarDays}/><Stat label="Personas recibidas" value={people} note="En citas atendidas; incluye personal" icon={Users}/><Stat label="Promedio por cita" value={attended.length?(people/attended.length).toFixed(1):'0'} note="Personas por cita atendida" icon={BarChart3}/><Stat label="Operaciones atendidas" value={attended.reduce((n:number,b:any)=>n+b.operations.length,0)} note="Una cita puede tener varias" icon={FileText}/></div><OperationsMetrics bookings={data.bookings} catalog={data.operations} from={period==='all'?undefined:start} to={end}/><div className="metrics-grid"><section className="panel"><div className="panel-heading"><div><h2>Operaciones atendidas</h2><p>Frecuencia por operación · incluye las de cero atenciones</p></div><Choice value={order} onChange={setOrder} options={[{value:'most',label:'Más atendidas'},{value:'least',label:'Menos atendidas'}]}/></div><div className="ranking">{ordered.map((o:any,i:number)=><div className="ranking-row" key={o.id}><span className="rank">{String(i+1).padStart(2,'0')}</span><div><div className="flex-between"><span>{o.name}</span><b>{o.count}</b></div><div className="bar-track"><i style={{width:`${o.count/Math.max(1,...ops.map((p:any)=>p.count))*100}%`}}/></div><small>{o.matter}</small></div></div>)}</div></section><div className="metrics-right"><section className="panel"><div className="panel-heading"><div><h2>Uso por sala</h2><p>Citas y horas reservadas</p></div><DoorOpen size={20}/></div><div className="room-usage">{ROOMS.map(r=>{const rows=scheduled.filter((b:any)=>b.room===r.id);return <div key={r.id}><div className="flex-between"><strong>{r.name}</strong><b>{rows.length} citas</b></div><div className="bar-track"><i style={{width:`${rows.length/Math.max(1,scheduled.length)*100}%`,background:r.color}}/></div><small>{(rows.reduce((n:number,b:any)=>n+b.duration,0)/60).toFixed(1)} horas · {rows.filter((b:any)=>b.status==='attended').length} atendidas</small></div>})}</div></section><section className="panel"><div className="panel-heading"><div><h2>Atención por integrante</h2><p>Citas registradas y atendidas</p></div><Users size={20}/></div><Table><TableHeader><TableRow><TableHead>PERSONA</TableHead><TableHead>CITAS</TableHead><TableHead>ATENDIDAS</TableHead></TableRow></TableHeader><TableBody>{data.users.map((u:any)=><TableRow key={u.id}><TableCell><b>{u.name}</b><small>{data.teams.find((t:any)=>t.id===u.team)?.name}</small></TableCell><TableCell>{scheduled.filter((b:any)=>b.attendee===u.id).length}</TableCell><TableCell>{attended.filter((b:any)=>b.attendee===u.id).length}</TableCell></TableRow>)}</TableBody></Table></section></div></div></>;
+ }
+diff --git a/modules/operations-summary/OperationsMetrics.tsx b/modules/operations-summary/OperationsMetrics.tsx
+new file mode 100644
+--- /dev/null
++++ b/modules/operations-summary/OperationsMetrics.tsx
+@@ -0,0 +1,33 @@
++'use client';
++import { useState } from 'react';
++import { aggregateOperations } from './aggregate';
++import type { Measure, Operation, OperationBooking } from './aggregate';
++import { OperationsSummary } from './OperationsSummary';
++import styles from './operations.module.css';
++
++/** El rango lo controla el selector 7 / 30 días / historial de la aplicación. */
++export function OperationsMetrics({ bookings, catalog, from, to }: {
++  bookings: readonly OperationBooking[]; catalog: readonly Operation[]; from?: string; to: string;
++}) {
++  const [measure, setMeasure] = useState<Measure>('scheduled');
++  const [order, setOrder] = useState<'most' | 'least'>('most');
++  const [includeZero, setIncludeZero] = useState(false);
++  return <div className={styles.metrics}>
++    <div className={styles.controls}>
++      <label>Ordenar y calcular porcentaje por
++        <select value={measure} onChange={event => setMeasure(event.target.value as Measure)}>
++          <option value="scheduled">Operaciones agendadas</option><option value="attended">Operaciones atendidas</option>
++        </select>
++      </label>
++      <label>Orden
++        <select value={order} onChange={event => setOrder(event.target.value as 'most' | 'least')}>
++          <option value="most">Más frecuentes primero</option><option value="least">Menos frecuentes primero</option>
++        </select>
++      </label>
++      <label className={styles.check}><input type="checkbox" checked={includeZero} onChange={event => setIncludeZero(event.target.checked)}/>
++        Incluir catálogo activo sin citas</label>
++    </div>
++    <OperationsSummary title="Frecuencia de operaciones" measure={measure} order={order}
++      report={aggregateOperations(bookings, catalog, { from, to, includeZero })}/>
++  </div>;
++}
+diff --git a/modules/operations-summary/OperationsSummary.tsx b/modules/operations-summary/OperationsSummary.tsx
+new file mode 100644
+--- /dev/null
++++ b/modules/operations-summary/OperationsSummary.tsx
+@@ -0,0 +1,54 @@
++import { aggregateOperations, operationShare, sortOperations } from './aggregate';
++import type { Measure, Operation, OperationBooking, Report } from './aggregate';
++import styles from './operations.module.css';
++
++const number = (value: number) => value.toLocaleString('es-MX');
++const dateLabel = (date: string) => new Intl.DateTimeFormat('es-MX', {
++  day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
++}).format(new Date(date + 'T12:00:00Z'));
++
++export function OperationsSummary({ report, title = 'Resumen de operaciones', measure = 'scheduled', order = 'most' }: {
++  report: Report; title?: string; measure?: Measure; order?: 'most' | 'least';
++}) {
++  const rows = sortOperations(report.rows, measure, order);
++  const label = measure === 'attended' ? 'atendidas' : 'agendadas';
++  return <section className={styles.summary} aria-label={title}>
++    <header className={styles.heading}>
++      <div><p className={styles.eyebrow}>ACTIVIDAD DEL DESPACHO</p><h2>{title}</h2></div>
++      <p>{report.from === report.to ? dateLabel(report.to) :
++        `${report.from ? dateLabel(report.from) : 'Desde el inicio'} al ${dateLabel(report.to)}`}</p>
++    </header>
++    <dl className={styles.totals}>
++      <div><dt>Citas agendadas</dt><dd>{number(report.appointments.scheduled)}</dd>
++        <small>Pendientes: {number(report.appointments.pending)} · Atendidas: {number(report.appointments.attended)}</small></div>
++      <div><dt>Operaciones agendadas</dt><dd>{number(report.operations.scheduled)}</dd>
++        <small>Pendientes: {number(report.operations.pending)} · Atendidas: {number(report.operations.attended)}</small></div>
++      <div><dt>Tipos de operación agendados</dt><dd>{number(report.rows.filter(row => row.scheduled > 0).length)}</dd>
++        <small>Tipos distintos con al menos una cita</small></div>
++    </dl>
++    <div className={styles.tableWrap}><table className={styles.table}>
++      <caption>Frecuencia por tipo · {order === 'most' ? 'Mayor' : 'Menor'} a {order === 'most' ? 'menor' : 'mayor'} número de operaciones {label}</caption>
++      <thead><tr><th scope="col">Operación / materia</th><th scope="col">Agendadas</th><th scope="col">Pendientes</th><th scope="col">Atendidas</th><th scope="col">% de operaciones {label}</th></tr></thead>
++      <tbody>{rows.length ? rows.map(row => <tr key={row.id}>
++        <th scope="row"><strong>{row.name}</strong><small>{row.matter}{row.active === false ? ' · Inactiva en catálogo' : ''}</small></th>
++        <td>{number(row.scheduled)}</td><td>{number(row.pending)}</td><td>{number(row.attended)}</td>
++        <td>{operationShare(row, report, measure).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</td>
++      </tr>) : <tr><td colSpan={5} className={styles.empty}>Sin operaciones agendadas en este período.</td></tr>}</tbody>
++      <tfoot><tr><th scope="row">Total de operaciones</th><td>{number(report.operations.scheduled)}</td><td>{number(report.operations.pending)}</td><td>{number(report.operations.attended)}</td><td>{report.operations[measure] ? '100.0%' : '0.0%'}</td></tr></tfoot>
++    </table></div>
++    <p className={styles.note}>Agendadas = pendientes + atendidas. Cada tipo cuenta una vez por cita; una cita puede incluir varios tipos.
++      El porcentaje usa el total de operaciones {label}; puede haber diferencias de redondeo.</p>
++    <p className={styles.note}>Citas fuera del conteo — canceladas: {number(report.excluded.cancelled)}; en espera: {number(report.excluded.waiting)}; eliminadas: {number(report.excluded.deleted)}.
++      Los bloqueos de salas no son operaciones.</p>
++    {!!report.withoutOperations && <p className={styles.warning}>Revisar datos: {number(report.withoutOperations)} citas agendadas no tienen operaciones seleccionadas.</p>}
++    {!!report.unresolvedOperationIds.length && <p className={styles.warning}>Revisar catálogo: hay {number(report.unresolvedOperationIds.length)} tipos sin etiqueta; sus cantidades sí se incluyen.</p>}
++  </section>;
++}
++
++/** Recibir TODAS las citas autorizadas del día, sin búsqueda ni filtro de sala. */
++export function DailyOperationsSummary({ bookings, catalog, date }: {
++  bookings: readonly OperationBooking[]; catalog: readonly Operation[]; date: string;
++}) {
++  return <OperationsSummary title="Resumen de operaciones del día"
++    report={aggregateOperations(bookings, catalog, { from: date, to: date })}/>;
++}
+diff --git a/modules/operations-summary/aggregate.ts b/modules/operations-summary/aggregate.ts
+new file mode 100644
+--- /dev/null
++++ b/modules/operations-summary/aggregate.ts
+@@ -0,0 +1,133 @@
++/** Conteos derivados de citas actuales; no escribe en la base ni en la auditoría. */
++export interface Operation {
++  id: string;
++  name: string;
++  matter: string;
++  active?: boolean;
++}
++
++export interface OperationBooking {
++  id: string;
++  date: string; // Fecha de atención en CDMX, AAAA-MM-DD; no createdAt.
++  status: 'confirmed' | 'attended' | 'waiting' | 'cancelled' | 'deleted';
++  operationIds?: readonly string[];
++  operations?: readonly Operation[]; // Instantáneas históricas.
++}
++
++export interface Counts {
++  scheduled: number;
++  pending: number;
++  attended: number;
++}
++
++export interface OperationRow extends Operation, Counts {}
++export type Measure = 'scheduled' | 'attended';
++export interface Report {
++  from?: string;
++  to: string;
++  appointments: Counts;
++  operations: Counts;
++  rows: OperationRow[];
++  excluded: { waiting: number; cancelled: number; deleted: number };
++  withoutOperations: number;
++  unresolvedOperationIds: string[];
++}
++
++export interface ReportOptions {
++  from?: string; // Omitir para todo el historial hasta to, inclusive.
++  to: string;
++  includeZero?: boolean; // Incluye catálogo activo sin uso en el período.
++}
++
++function validateDate(value: string) {
++  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value < '0001-01-01') {
++    throw new Error(`Fecha inválida: ${value}. Usa AAAA-MM-DD.`);
++  }
++  const date = new Date(value + 'T12:00:00Z');
++  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
++    throw new Error(`Fecha inválida: ${value}.`);
++  }
++}
++
++const counts = (): Counts => ({ scheduled: 0, pending: 0, attended: 0 });
++function increment(target: Counts, status: 'confirmed' | 'attended') {
++  target.scheduled += 1;
++  target[status === 'attended' ? 'attended' : 'pending'] += 1;
++}
++
++/** Un ID de operación aporta como máximo una ocurrencia por cita. */
++export function aggregateOperations(
++  bookings: readonly OperationBooking[],
++  catalog: readonly Operation[],
++  options: ReportOptions,
++): Report {
++  validateDate(options.to);
++  if (options.from !== undefined) {
++    validateDate(options.from);
++    if (options.from > options.to) throw new Error('El inicio del período supera el fin.');
++  }
++  const definitions = new Map(catalog.map(o => [o.id, o]));
++  const rows = new Map<string, OperationRow>();
++  const unresolved = new Set<string>();
++  const seen = new Set<string>();
++  const report: Report = {
++    from: options.from, to: options.to, appointments: counts(), operations: counts(), rows: [],
++    excluded: { waiting: 0, cancelled: 0, deleted: 0 }, withoutOperations: 0,
++    unresolvedOperationIds: [],
++  };
++  if (options.includeZero) {
++    for (const operation of catalog) {
++      if (operation.active !== false) rows.set(operation.id, { ...operation, ...counts() });
++    }
++  }
++  // Conserva una etiqueta histórica estable cuando ya no existe en el catálogo.
++  const snapshots = new Map<string, Operation>();
++  for (const booking of [...bookings].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
++    validateDate(booking.date);
++    if (booking.date > options.to || (options.from && booking.date < options.from)) continue;
++    for (const operation of booking.operations ?? []) snapshots.set(operation.id, operation);
++  }
++  for (const booking of bookings) {
++    if (booking.date > options.to || (options.from && booking.date < options.from)) continue;
++    if (!booking.id || seen.has(booking.id)) throw new Error(`ID de cita vacío o repetido: ${booking.id}`);
++    seen.add(booking.id);
++    if (booking.status === 'waiting' || booking.status === 'cancelled' || booking.status === 'deleted') {
++      report.excluded[booking.status] += 1;
++      continue;
++    }
++    if (booking.status !== 'confirmed' && booking.status !== 'attended') {
++      throw new Error(`Estado de cita no reconocido: ${booking.status}`);
++    }
++    increment(report.appointments, booking.status);
++    // Si operationIds existe, es autoritativo (también si es []). Las instantáneas dan etiquetas.
++    const ids = new Set(booking.operationIds ?? booking.operations?.map(o => o.id) ?? []);
++    if (ids.size === 0) report.withoutOperations += 1;
++    for (const id of ids) {
++      if (!id) throw new Error(`ID de operación vacío en cita ${booking.id}`);
++      const definition = definitions.get(id) ?? snapshots.get(id);
++      if (!definition) unresolved.add(id);
++      const row = rows.get(id) ?? {
++        ...(definition ?? { id, name: `Operación sin etiqueta (${id})`, matter: 'Sin materia' }), ...counts(),
++      };
++      increment(row, booking.status);
++      increment(report.operations, booking.status);
++      rows.set(id, row);
++    }
++  }
++  report.rows = sortOperations([...rows.values()]);
++  report.unresolvedOperationIds = [...unresolved].sort();
++  return report;
++}
++
++export function sortOperations(
++  rows: readonly OperationRow[], measure: Measure = 'scheduled', order: 'most' | 'least' = 'most',
++): OperationRow[] {
++  return [...rows].sort((a, b) =>
++    (order === 'most' ? b[measure] - a[measure] : a[measure] - b[measure]) ||
++    a.name.localeCompare(b.name, 'es-MX') || a.id.localeCompare(b.id));
++}
++
++/** Participación sobre operaciones, no sobre citas; no redondear antes de sumar. */
++export function operationShare(row: OperationRow, report: Report, measure: Measure): number {
++  return report.operations[measure] ? row[measure] / report.operations[measure] * 100 : 0;
++}
+diff --git a/modules/operations-summary/operations.module.css b/modules/operations-summary/operations.module.css
+new file mode 100644
+--- /dev/null
++++ b/modules/operations-summary/operations.module.css
+@@ -0,0 +1,56 @@
++.summary { margin-top: 24px; padding: 24px; border: 1px solid #d6dfe8; border-radius: 14px; background: #fff; color: #172b49; font: 14px/1.5 system-ui, sans-serif; }
++.heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 20px; }
++.heading h2 { margin: 4px 0 0; font: 600 24px/1.2 Georgia, serif; }
++.heading p { margin: 0; color: #4d5e72; }
++.heading .eyebrow { color: #365c60; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
++.totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 0 0 24px; }
++.totals div { padding: 14px 16px; border-left: 3px solid #4e797b; background: #f3f7f7; }
++.totals dt { font-size: 12px; color: #42566b; }
++.totals dd { margin: 3px 0; font-size: 29px; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; }
++.totals small { font-size: 11px; color: #42566b; }
++.tableWrap { overflow-x: auto; }
++.table { border-collapse: collapse; width: 100%; text-align: left; font-variant-numeric: tabular-nums; }
++.table caption { text-align: left; color: #4d5e72; padding-bottom: 10px; font-size: 12px; }
++.table th, .table td { padding: 11px 10px; border-bottom: 1px solid #d6dfe8; }
++.table thead th { font-size: 11px; font-weight: 600; background: #edf2f5; vertical-align: bottom; }
++.table thead th:first-child { width: 46%; }
++.table tbody th { font-weight: 400; }
++.table th strong { font-weight: 600; }
++.table th small { display: block; font-size: 11px; color: #526579; }
++.table td, .table th:not(:first-child) { text-align: right; }
++.table tfoot { font-weight: 700; }
++.table .empty { text-align: center; color: #526579; padding: 24px; }
++.note { margin: 12px 0 0; font-size: 11px; color: #526579; }
++.warning { border-left: 3px solid #926a2d; padding-left: 10px; color: #745010; font-size: 12px; }
++.controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin-top: 28px; }
++.controls label { display: flex; flex-direction: column; gap: 5px; font: 12px system-ui, sans-serif; color: #42566b; }
++.controls select { padding: 10px; border: 1px solid #bccbd8; border-radius: 7px; color: #172b49; background: white; font-size: 13px; }
++.controls .check { flex-direction: row; align-items: center; padding: 10px 0; }
++.controls input { accent-color: #365c60; }
++.controls select:focus-visible, .controls input:focus-visible { outline: 2px solid #365c60; outline-offset: 3px; }
++.metrics { min-width: 0; }
++@media screen and (max-width: 650px) {
++  .summary { padding: 16px; }
++  .heading { align-items: start; flex-direction: column; }
++  .totals { grid-template-columns: 1fr; gap: 8px; }
++  .table { min-width: 580px; }
++}
++@media print {
++  .summary { margin-top: 7mm; padding: 0; border: 0; border-radius: 0; color: #111; background: white; font-size: 9pt; }
++  .heading { break-after: avoid; margin-bottom: 4mm; }
++  .heading h2 { font-size: 15pt; }
++  .heading p { font-size: 9pt; }
++  .totals { break-inside: avoid; gap: 5mm; margin-bottom: 4mm; }
++  .totals div { padding: 2mm 3mm; border: 1px solid #777; background: white; }
++  .totals dd { font-size: 19pt; }
++  .tableWrap { overflow: visible; }
++  .table { min-width: 0; }
++  .table caption { caption-side: top; font-size: 8pt; }
++  .table th, .table td { padding: 2mm; }
++  .table thead { display: table-header-group; }
++  .table thead th, .table th small { font-size: 8pt; }
++  .table tfoot { display: table-row-group; }
++  .table tr { break-inside: avoid; }
++  .note { font-size: 8pt; }
++  .controls { display: none !important; }
++}
+diff --git a/modules/operations-summary/useDayPrinting.ts b/modules/operations-summary/useDayPrinting.ts
+new file mode 100644
+--- /dev/null
++++ b/modules/operations-summary/useDayPrinting.ts
+@@ -0,0 +1,19 @@
++'use client';
++import { useEffect, useState } from 'react';
++import { flushSync } from 'react-dom';
++
++/** Permite imprimir el día completo y restaurar los filtros de pantalla al cerrar el diálogo. */
++export function useDayPrinting() {
++  const [isPrinting, setIsPrinting] = useState(false);
++  useEffect(() => {
++    const begin = () => flushSync(() => setIsPrinting(true));
++    const end = () => setIsPrinting(false);
++    window.addEventListener('beforeprint', begin);
++    window.addEventListener('afterprint', end);
++    return () => {
++      window.removeEventListener('beforeprint', begin);
++      window.removeEventListener('afterprint', end);
++    };
++  }, []);
++  return isPrinting;
++}

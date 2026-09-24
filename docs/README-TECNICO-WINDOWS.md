@@ -8,7 +8,7 @@ Implementar la aplicación existente en **una PC Windows con Node.js 24 y SQLite
 
 **Este documento es la especificación técnica y el procedimiento de instalación.** El servidor nativo existe; las plantillas Windows incluidas deben guardarse, instalarse y verificarse en la PC. No son un instalador ya ejecutado. El despliegue en Windows y la migración desde Sites siguen pendientes de validación.
 
-Código contrastado con `ea72db7e1cf56a8a52c0ac1ab1efcaf1eb00e878`; el cambio posterior observado en GitHub modifica únicamente el README. Los scripts actuales `Iniciar-Windows.cmd`, `Instalar-Windows.ps1`, `Respaldar-Windows.ps1` y `Restaurar-Windows.ps1` corresponden a Docker: **no usarlos para la ruta nativa descrita aquí**. Docker queda como alternativa secundaria.
+Código contrastado con `ea72db7e1cf56a8a52c0ac1ab1efcaf1eb00e878`; esta ampliación incorpora atenciones fuera de la oficina y su exclusión del uso de salas. Los scripts actuales `Iniciar-Windows.cmd`, `Instalar-Windows.ps1`, `Respaldar-Windows.ps1` y `Restaurar-Windows.ps1` corresponden a Docker: **no usarlos para la ruta nativa descrita aquí**. Docker queda como alternativa secundaria.
 
 ```text
 GitHub privado ── descargar versión aprobada ──> PC Windows
@@ -50,6 +50,7 @@ No ejecutar `npm update` como parte rutinaria de instalación. Registrar version
 | `lib/catalog.ts` | Salas, 44 operaciones iniciales, horario y asignación |
 | `lib/auth.ts` | Hashes, tokens y representación pública del usuario |
 | `lib/server-config.ts` | Origen permitido y cookie segura |
+| `lib/metrics.ts` | Actividad general y uso de salas con exclusión de atenciones externas |
 | `lib/export.ts` | CSV, XLSX, folios y confirmación imprimible |
 | `db/schema.ts` | Esquema lógico |
 | `db/sqlite.mjs` | Apertura, migraciones, código inicial y backup consistente |
@@ -73,7 +74,7 @@ El PDF del catálogo fue fuente de la carga inicial. No se consulta en cada arra
 - Duración entera entre 15 y 600, múltiplo de 15, siempre terminando antes o al cierre. Con el horario inicial, máximo efectivo 570 minutos.
 - La hora de inicio se valida al minuto; la API no exige múltiplos de 15. Las alternativas sí usan pasos de 15 minutos.
 - Campos: cliente, integrante que atiende, fecha, hora, duración, personas, operaciones, accesibilidad y notas opcionales. Equipo/nombres se derivan del integrante seleccionado.
-- `people` cuenta **todos los ocupantes, incluido personal**. Entero de 1 a 100; más de 16 no consigue sala y puede entrar en espera.
+- `people` cuenta **todos los ocupantes, incluido personal**. Entero de 1 a 100; en oficina, más de 16 no consigue sala y puede entrar en espera. Fuera de la oficina no aplica el límite de capacidad de las salas.
 - Al menos una operación activa; IDs únicos. Selector agrupado por materia, checkboxes y chips removibles.
 - Crear/reagendar exige fecha/hora futuras. No hay calendario de festivos ni exclusión de fines de semana.
 
@@ -94,14 +95,28 @@ Intervalos [inicio, fin):
 cruce = inicio_existente < fin_solicitado && fin_existente > inicio_solicitado
 ```
 
-10:00–11:00 y 11:00–12:00 son compatibles. Ocupan sala `confirmed` y `attended`. Reagendar excluye la propia cita; `waiting`, `cancelled`, `deleted` no ocupan.
+10:00–11:00 y 11:00–12:00 son compatibles. Ocupan sala las citas en oficina con estado `confirmed` o `attended`; las externas nunca ocupan sala. Reagendar excluye la propia cita; `waiting`, `cancelled`, `deleted` no ocupan.
 
 Sin sala: `409`, `conflict: true`, hasta cuatro horarios del mismo día ordenados por cercanía a la hora solicitada; desempate por hora ascendente. No ofrece horas pasadas del día actual. Con `waiting: true` guarda espera si no hay sala; si existe disponibilidad, confirma incluso con ese campo activado.
+
+### Atención fuera de la oficina
+
+Checkbox «Fuera de la oficina» en crear/editar cita. La API guarda `outsideOffice: true`, `room: null`, `status: confirmed`, aun con todas las salas ocupadas/bloqueadas o con más de 16 personas. Mantiene fecha, hora, duración, personas, operaciones, integrante y folio. Se conservan horario 08:00–17:30, duración válida, permisos y demás validaciones.
+
+- No solicita alternativas de sala ni lista de espera. Una espera convertida en externa pasa a confirmada.
+- Al convertir oficina → externa, libera la sala en la misma transacción. Al convertir externa → oficina, vuelve a validar capacidad, bloqueos y disponibilidad; ante conflicto, no modifica la cita hasta resolverlo o pedir espera.
+- Un booleano omitido en una cita antigua significa oficina. En una edición con campo omitido conserva el valor existente. No requiere migración SQL: el dato está en JSON de `records`.
+- Incluida en agenda, totales, personas atendidas, promedio, ranking de operaciones y actividad por integrante. Excluida del número de salas ocupadas y de los conteos, horas y denominadores de uso por sala.
+- Agenda muestra «Fuera de la oficina» y filtro propio. Vista CEO conserva cinco salas y agrega una sección de atenciones externas, también imprimible.
+- PDF identifica el lugar; CSV/XLSX agregan columna explícita «Fuera de la oficina» en Citas y Operaciones por cita. Auditoría conserva el campo y los cambios antes/después.
+
+El módulo de resumen de operaciones del PR #1 debe seguir recibiendo `data.bookings` completo, no `roomActive`/`roomBookings`: su cálculo por estado y operaciones incluye las citas externas. Al integrar su parche de presentación, conservar `outsideOffice`, `bookingLocation`, el filtro externo y la sección externa de CEO; no reemplazar la página por una referencia anterior. La forma de contar salas es independiente del resumen de operaciones.
 
 ### 3.3 Estados y folios
 
 ```text
-crear ── con sala ──> confirmed ── llegada de la hora ──> attended
+crear fuera de oficina ── sin sala ──> confirmed
+crear en oficina ── con sala ──> confirmed ── llegada de la hora ──> attended
    └── sin sala ──> waiting ── retry disponible ──> confirmed
 confirmed / waiting ── motivo ──> cancelled
 confirmed / waiting / cancelled ── Admin/CEO + motivo ──> deleted
@@ -123,10 +138,10 @@ Staff lee la agenda completa, pero modifica solo citas de su equipo y selecciona
 | --- | --- |
 | Periodo | 7 o 30 días civiles incluyendo hoy; todo el historial hasta hoy |
 | Citas totales | Confirmadas + atendidas; excluye espera/cancelación/eliminación |
-| Personas recibidas | Suma de `people` atendidas; incluye personal y visitas repetidas |
+| Personas atendidas | Suma de `people` atendidas, en oficina y fuera; incluye personal y visitas repetidas |
 | Promedio | Personas / citas atendidas; cero si no hay atenciones |
 | Ranking | Frecuencia por operación en citas atendidas; incluye ceros |
-| Uso por sala | Citas y horas confirmadas/atendidas; no es tasa de ocupación disponible |
+| Uso por sala | Solo citas confirmadas/atendidas en salas de oficina; externas excluidas también del denominador |
 | Por integrante | Persona que atiende (`attendee`), no necesariamente quien capturó |
 
 Exportación Admin/CEO de todo el historial, incluyendo futuro, cancelaciones y eliminaciones, independientemente del filtro de métricas. XLSX: Citas, Operaciones por cita, Auditoría, Catálogo, Bloqueos vigentes. CSV: esas secciones concatenadas, BOM UTF-8 y protección de fórmulas; no es una tabla única normalizada.
@@ -171,7 +186,7 @@ Auditoría de setup, accesos/fallos, logout, citas/estados, bloqueos, equipos, u
 | `setup` | `setupCode, username, name, password` | Base sin usuarios + código local |
 | `login` / `logout` | Credenciales / ninguno | Público / autenticado |
 | `password` | `current, password` | Usuario actual |
-| `booking` | `id?, expectedUpdatedAt?, client, attendee, date, time, duration, people, accessibility, operationIds, notes?, waiting?` | Propio equipo o elevado |
+| `booking` | `id?, expectedUpdatedAt?, client, attendee, date, time, duration, people, accessibility, outsideOffice?, operationIds, notes?, waiting?` | Propio equipo o elevado |
 | `status` | `id, status, reason?` | Propio equipo; `deleted` solo elevado |
 | `retry` | `id` | Espera del equipo o elevado |
 | `block` | `room,date,start,end,reason` | Admin/CEO |
@@ -491,6 +506,7 @@ No permitir escrituras en dos instalaciones sin conciliación. Definir responsab
 ```powershell
 npm.cmd run typecheck
 node tests/local-database.mjs
+node tests/outside-office.mjs
 npm.cmd run build
 node scripts/package-release.mjs
 ```
@@ -539,6 +555,7 @@ El runner obtiene código inicial de la misma carpeta. `npm run test:integration
 | Permisos | Staff no bloquea, administra/exporta ni modifica otro equipo; lectura global verificada |
 | Concurrencia | Seis citas simultáneas de 4 personas: cinco salas distintas y un conflicto |
 | Accesibilidad | Barra ocupada: Anexo antes de Redonda para 5 personas |
+| Fuera de oficina | Con cinco salas ocupadas se confirma sin sala; convertir libera/reasigna; métricas generales sí y uso de salas no |
 | Capacidades | Grupo de 7 a Rectangular disponible; 17 nunca obtiene sala |
 | Horario | 16:30 + 60 válido; 17:00 + 60 rechazado; intervalos contiguos válidos |
 | Espera | Hasta 4 alternativas, cancelar libera, retry asigna |

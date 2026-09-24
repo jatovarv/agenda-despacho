@@ -1,0 +1,9 @@
+{
+  "name": "agenda-modulo-operaciones",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Complemento independiente de conteo de operaciones para Agenda del despacho",
+  "engines": { "node": ">=24 <25" },
+  "scripts": { "test": "node --test pruebas/*.test.mjs" }
+}
